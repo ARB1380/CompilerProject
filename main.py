@@ -2,50 +2,50 @@ import re
 
 
 
-def isSymbolOrBlank(input):
+def is_symbol_or_blank(input):
     return input == ' ' or input == ';' or input == ':' or input == ',' \
         or input == '[' or input == ']' or input == '(' or input == ')'\
         or input == '{' or input == '}' or input == '+' or input == '-' \
         or input == '=' or input == '*' or input == '<'
 
-def isSymbol(input):
+def is_symbol(input):
     return input == ';' or input == ':' or input == ',' \
         or input == '[' or input == ']' or input == '(' \
         or input == ')' or input == '{' or input == '}' \
         or input == '+' or input == '-' or input == '*' \
         or input == '=' or input == '<'
 
-def isNumber(input):
+def is_number(input):
     return re.search("^[0-9]+$", input) is not None
 
-def isIdentifier(input):
+def is_identifier(input):
     return re.search("[a-zA-Z][a-zA-Z0-9]*",input) is not None
 
-def isKeyWord(input):
+def is_keyword(input):
     return input == "if" or input == "else" or input == "void"\
         or input == "int" or input == "repeat" or input == "break" \
         or input == "until" or input == "return"
 
-def isInvalidNumber(input):
+def is_invalid_number(input):
     return re.search("[0-9]+[a-zA-Z][0-9a-zA-Z]*", input) is not None
 
-def isInvalidInput(input):
+def is_invalid_input(input):
     return re.search("[a-zA-Z0-9]*[^a-zA-Z0-9\s]", input) is not None
 
-def get_token(input,right,subString):
-    if isSymbol(subString):
+def get_next_token(input, right, subString):
+    if is_symbol(subString):
         if subString == '=' and input[right + 1] == '=':
             return "(SYMBOL, ==)"
         return f"(SYMBOL,{subString})"
-    if isNumber(subString):
+    if is_number(subString):
         return f"(NUM,{subString})"
-    if isInvalidNumber(subString):
+    if is_invalid_number(subString):
         return f"({subString}, invalid number)"
-    if isKeyWord(subString):
+    if is_keyword(subString):
         return f"(KEYWORD,{subString})"
-    if isIdentifier(subString):
+    if is_identifier(subString):
         return f"(ID,{subString})"
-    if isInvalidInput(subString):
+    if is_invalid_input(subString):
         return f"({subString}, invalid input)"
     return None
 
@@ -59,19 +59,19 @@ def get_sub_string(left, right, input):
 
 
 
-def get_next_token(input):
+def tokenize(input):
     length = len(input)
     left = 0
     right = 0
     while left <= right and right <= length:
-        if right != length and not (isSymbolOrBlank(input[right])):
+        if right != length and not (is_symbol_or_blank(input[right])):
             right = right + 1
         else:
             if left == right == length:
                 break
 
             subString = get_sub_string(left, right, input)
-            token = get_token(input,right,subString)
+            token = get_next_token(input, right, subString)
             if token == "(SYMBOL,==)":
                 left = left + 1
                 right = right + 1
@@ -86,7 +86,7 @@ def get_next_token(input):
 
 
 input ="cde = a;"
-get_next_token(input)
+tokenize(input)
 
 
 # file = open("input.txt","r")
