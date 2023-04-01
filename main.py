@@ -33,7 +33,7 @@ def is_number(input):
 
 
 def is_identifier(input):
-    return re.search("[a-zA-Z][a-zA-Z0-9]*", input) is not None
+    return re.search("^[a-zA-Z][a-zA-Z0-9]*$", input) is not None
 
 
 def is_keyword(input):
@@ -43,11 +43,11 @@ def is_keyword(input):
 
 
 def is_invalid_number(input):
-    return re.search("[0-9]+[a-zA-Z][0-9a-zA-Z]*", input) is not None
+    return re.search("^[0-9]+[a-zA-Z][0-9a-zA-Z]*$", input) is not None
 
 
 def is_invalid_input(input):
-    return re.search("[a-zA-Z0-9]*[^a-zA-Z0-9\\s]", input) is not None
+    return re.search("^[a-zA-Z0-9]*[^a-zA-Z0-9\\s]$", input) is not None
 
 
 def get_next_token(input, right, sub_string):
@@ -65,6 +65,16 @@ def get_next_token(input, right, sub_string):
     if is_identifier(sub_string):
         return Token("ID", sub_string)
 
+    # if is_invalid_number(sub_string):
+    #     return Error(sub_string, "Invalid number")
+    #
+    # if is_invalid_input(sub_string):
+    #     return Error(sub_string, "Invalid input")
+
+    return None
+
+
+def get_error(sub_string):
     if is_invalid_number(sub_string):
         return Error(sub_string, "Invalid number")
 
@@ -80,8 +90,10 @@ def get_sub_string(left, right, input):
         sub_string = input[right]
     return sub_string
 
-
-def tokenize(input):
+symbols = []
+def tokenize(input, counter):
+    tokens = []
+    errors = []
     length = len(input)
     left = 0
     right = 0
@@ -94,21 +106,41 @@ def tokenize(input):
 
             sub_string = get_sub_string(left, right, input)
             token = get_next_token(input, right, sub_string)
-            if token is Token and token.lexeme == "==":
-                left = left + 1
-                right = right + 1
+            if token == None:
+                error = get_error(sub_string)
+                if error != None:
+                    errors.append(error)
+            else:
+                tokens.append(token)
+                if token.type == "KEYWORD" or token.type == "ID":
+                    symbols.append(token)
+                if token.lexeme == "==":
+                    left = left + 1
+                    right = right + 1
 
-            print(token)
             if left == right:
                 right = right + 1
             left = right
+    if len(tokens) != 0:
+        token_file.write(f"{counter}.")
+        for token in tokens:
+            token_file.write(f"({token.type}, {token.lexeme})")
+        token_file.write("\n")
+    if len(errors) != 0:
+        lexical_error_file.write(f"{counter}.")
+        for error in errors:
+            lexical_error_file.write(f"({error.value}, {error.message})")
+        lexical_error_file.write("\n")
 
 
-input = "cde = a;"
-tokenize(input)
 
 
-# file = open("input.txt","r")
-# counter = 1
-# for line in file:
-#     get_next_token(line)
+
+file = open("input.txt","r")
+token_file = open("tokens.txt", "a")
+symbol_file = open("symbol_table.txt","a")
+lexical_error_file = open("lexical_errors.txt","a")
+counter = 1
+for line in file:
+    tokenize(line, counter)
+    counter = counter + 1
