@@ -14,9 +14,7 @@ class Error:
 
 
 def is_letter_or_digit(input):
-    return re.search("[a-zA-Z0-9]",input) is not None
-
-
+    return re.search("[a-zA-Z0-9]", input) is not None
 
 
 def is_symbol_or_blank(input):
@@ -106,7 +104,7 @@ def tokenize(input, counter):
     length = len(input)
     left = 0
     right = 0
-    while left <= right and right <= length:
+    while left <= right <= length:
         if right != length and is_letter_or_digit(input[right]):
             right = right + 1
         else:
@@ -115,9 +113,9 @@ def tokenize(input, counter):
 
             sub_string = get_sub_string(left, right, input)
             token = get_next_token(input, right, sub_string)
-            if token == None:
+            if token is None:
                 error = get_error(sub_string)
-                if error != None:
+                if error is not None:
                     errors.append(error)
             else:
                 tokens.append(token)
@@ -141,22 +139,13 @@ def tokenize(input, counter):
         lexical_error_file.write("\n")
 
 
-
-
-
-file = open("input.txt","r")
+file = open("input.txt", "r")
 token_file = open("tokens.txt", "a")
-symbol_file = open("symbol_table.txt","a")
-lexical_error_file = open("lexical_errors.txt","a")
-symbols = {}
-symbols["if"] = "key"
-symbols["else"] = "key"
-symbols["break"] = "key"
-symbols["until"] = "key"
-symbols["void"] = "key"
-symbols["int"] = "key"
-symbols["repeat"] = "key"
-symbols["return"] = "key"
+symbol_file = open("symbol_table.txt", "a")
+lexical_error_file = open("lexical_errors.txt", "a")
+symbols = {"if": "key", "else": "key", "break": "key",
+           "until": "key", "void": "key", "int": "key",
+           "repeat": "key", "return": "key"}
 counter = 1
 for line in file:
     tokenize(line, counter)
