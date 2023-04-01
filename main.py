@@ -13,11 +13,17 @@ class Error:
         self.message = message
 
 
+def is_not_letter_or_digit(input):
+    return re.search("[^a-zA-Z0-9]",input) is not None
+
+
+
+
 def is_symbol_or_blank(input):
     return input == ' ' or input == ';' or input == ':' or input == ',' \
-        or input == '[' or input == ']' or input == '(' or input == ')'\
+        or input == '[' or input == ']' or input == '(' or input == ')' \
         or input == '{' or input == '}' or input == '+' or input == '-' \
-        or input == '=' or input == '*' or input == '<'
+        or input == '=' or input == '*' or input == '<' or input == '\n'
 
 
 def is_symbol(input):
@@ -88,9 +94,21 @@ def get_sub_string(left, right, input):
     sub_string = input[left: right]
     if len(sub_string) == 0:
         sub_string = input[right]
+    else:
+        if not (is_symbol_or_blank(input[right])):
+            sub_string = f"{sub_string}{input[right]}"
     return sub_string
 
-symbols = []
+
+symbols = {}
+symbols["if"] = "key"
+symbols["else"] = "key"
+symbols["break"] = "key"
+symbols["until"] = "key"
+symbols["void"] = "key"
+symbols["int"] = "key"
+symbols["repeat"] = "key"
+symbols["return"] = "key"
 def tokenize(input, counter):
     tokens = []
     errors = []
@@ -98,7 +116,7 @@ def tokenize(input, counter):
     left = 0
     right = 0
     while left <= right and right <= length:
-        if right != length and not (is_symbol_or_blank(input[right])):
+        if right != length and not (is_not_letter_or_digit(input[right])):
             right = right + 1
         else:
             if left == right == length:
@@ -112,8 +130,9 @@ def tokenize(input, counter):
                     errors.append(error)
             else:
                 tokens.append(token)
-                if token.type == "KEYWORD" or token.type == "ID":
-                    symbols.append(token)
+                if token.type == "ID":
+                    if not(token.lexeme in symbols):
+                        symbols[token.lexeme] = token.type
                 if token.lexeme == "==":
                     left = left + 1
                     right = right + 1
@@ -144,3 +163,9 @@ counter = 1
 for line in file:
     tokenize(line, counter)
     counter = counter + 1
+
+counter = 1
+for symbol in symbols:
+        symbol_file.write(f"{counter}.{symbol}")
+        symbol_file.write("\n")
+        counter = counter + 1
