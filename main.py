@@ -13,8 +13,8 @@ class Error:
         self.message = message
 
 
-def is_not_letter_or_digit(input):
-    return re.search("[^a-zA-Z0-9]",input) is not None
+def is_letter_or_digit(input):
+    return re.search("[a-zA-Z0-9]",input) is not None
 
 
 
@@ -71,12 +71,6 @@ def get_next_token(input, right, sub_string):
     if is_identifier(sub_string):
         return Token("ID", sub_string)
 
-    # if is_invalid_number(sub_string):
-    #     return Error(sub_string, "Invalid number")
-    #
-    # if is_invalid_input(sub_string):
-    #     return Error(sub_string, "Invalid input")
-
     return None
 
 
@@ -100,15 +94,12 @@ def get_sub_string(left, right, input):
     return sub_string
 
 
-symbols = {}
-symbols["if"] = "key"
-symbols["else"] = "key"
-symbols["break"] = "key"
-symbols["until"] = "key"
-symbols["void"] = "key"
-symbols["int"] = "key"
-symbols["repeat"] = "key"
-symbols["return"] = "key"
+def add_to_symbol_table(token):
+    if token.type == "ID":
+        if not (token.lexeme in symbols):
+            symbols[token.lexeme] = token.type
+
+
 def tokenize(input, counter):
     tokens = []
     errors = []
@@ -116,7 +107,7 @@ def tokenize(input, counter):
     left = 0
     right = 0
     while left <= right and right <= length:
-        if right != length and not (is_not_letter_or_digit(input[right])):
+        if right != length and is_letter_or_digit(input[right]):
             right = right + 1
         else:
             if left == right == length:
@@ -130,9 +121,7 @@ def tokenize(input, counter):
                     errors.append(error)
             else:
                 tokens.append(token)
-                if token.type == "ID":
-                    if not(token.lexeme in symbols):
-                        symbols[token.lexeme] = token.type
+                add_to_symbol_table(token)
                 if token.lexeme == "==":
                     left = left + 1
                     right = right + 1
@@ -159,6 +148,15 @@ file = open("input.txt","r")
 token_file = open("tokens.txt", "a")
 symbol_file = open("symbol_table.txt","a")
 lexical_error_file = open("lexical_errors.txt","a")
+symbols = {}
+symbols["if"] = "key"
+symbols["else"] = "key"
+symbols["break"] = "key"
+symbols["until"] = "key"
+symbols["void"] = "key"
+symbols["int"] = "key"
+symbols["repeat"] = "key"
+symbols["return"] = "key"
 counter = 1
 for line in file:
     tokenize(line, counter)
