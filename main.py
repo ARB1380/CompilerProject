@@ -225,7 +225,7 @@ if comment:
     lexical_error_file.write("\n")
     total_errors.append(error)
 if len(total_errors) == 0:
-    lexical_error_file.write("There is no lexical error")
+    lexical_error_file.write("There is no lexical error.")
 
 counter = 1
 for symbol in symbols:
