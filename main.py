@@ -71,6 +71,8 @@ def get_next_token(input, right, sub_string):
     if is_symbol(sub_string):
         if sub_string == '=' and input[right + 1] == '=':
             return Token("SYMBOL", "==")
+        if sub_string == '=' and not(is_symbol_or_blank(input[right + 1])) and not is_letter_or_digit(input[right + 1]):
+            return None
         if sub_string == '/':
             return None
         if sub_string == '*' and input[right + 1] == '/':
@@ -87,9 +89,14 @@ def get_next_token(input, right, sub_string):
         return Token("ID", sub_string)
 
     return None
+def is_invalid_equal(input):
+    return re.search("[^0-9a-zA-Z\\s]",input) is not None
 
 
-def get_error(sub_string):
+def get_error(sub_string,input,right):
+    if len(sub_string) == 1 and sub_string == "=" and is_invalid_equal(input[right + 1]):
+        return Error(sub_string + input[right + 1],constant.INVALID_INPUT)
+
     if is_invalid_number(sub_string):
         return Error(sub_string, constant.INVALID_NUMBER)
 
@@ -167,15 +174,21 @@ def tokenize(input, counter):
                     comment_line = counter
                     continue
                 if input[right] == '*' and input[right + 1] == '/':
-                    error = get_error(input[right: right + 2])
+                    error = get_error(input[right: right + 2],input,right)
                     right += 2
                 else:
-                    error = get_error(sub_string)
+                    error = get_error(sub_string,input,right)
                 if error is not None:
-                    errors.append(error)
                     if error.message == constant.INVALID_INPUT and len(error.value) > 1:
+                        if sub_string == "=":
+                            right = right + 2
                         right = right + 1
+                    if error.message == constant.INVALID_NUMBER:
+                        end = re.search("[0-9]+[a-zA-Z]",sub_string).end()
+                        right = end + left
+                        error.value = sub_string[0:end]
                     total_errors.append(error)
+                    errors.append(error)
             else:
                 tokens.append(token)
                 add_to_symbol_table(token)
