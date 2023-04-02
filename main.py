@@ -107,7 +107,7 @@ def get_sub_string(left, right, input):
     if len(sub_string) == 0:
         sub_string = input[right]
     else:
-        if not (is_symbol_or_blank(input[right])):
+        if right != len(input) and not (is_symbol_or_blank(input[right])):
             sub_string = f"{sub_string}{input[right]}"
     return sub_string
 
@@ -132,6 +132,7 @@ def tokenize(input, counter):
                 error = get_error(sub_string)
                 if error is not None:
                     errors.append(error)
+                    total_errors.append(error)
             right += 1
         elif comment and (input[right] == '*' and input[right + 1] != '/'):
             right += 1
@@ -151,6 +152,7 @@ def tokenize(input, counter):
                 error = get_error(sub_string)
                 if error is not None:
                     errors.append(error)
+                    total_errors.append(error)
             else:
                 tokens.append(token)
                 add_to_symbol_table(token)
@@ -177,6 +179,7 @@ file = open("input.txt", "r")
 token_file = open("tokens.txt", "a")
 symbol_file = open("symbol_table.txt", "a")
 lexical_error_file = open("lexical_errors.txt", "a")
+total_errors = []
 symbols = {"break": "key", "else": "key", "if": "key",
            "int": "key", "repeat": "key", "return": "key",
            "until": "key", "void": "key"}
@@ -184,6 +187,9 @@ counter = 1
 for line in file:
     tokenize(line, counter)
     counter += 1
+
+if len(total_errors) == 0:
+    lexical_error_file.write("There is no lexical error")
 
 counter = 1
 for symbol in symbols:
