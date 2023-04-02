@@ -1,4 +1,4 @@
-# Mohammad Mahdi Mirzaei
+# Mohammad Mahdi Mirzaei 99171022
 # Alireza Farshi 99101976
 
 import re
@@ -133,15 +133,19 @@ def tokenize(input, counter):
     global comment
     global comment_line
     global comment_string
+    global has_token
     while left <= right <= length:
-        if comment and not (input[right] == '*' and input[right + 1] == '/'):
+        if comment and length == 1:
+            comment_string += input[0]
+            break
+        if comment and length != 1 and not (input[right] == '*'  and input[right + 1] == '/'):
             comment_string += input[right]
             if right == length - 2:
                 comment_string += input[right + 1:]
                 break
 
             right += 1
-        elif comment and (input[right] == '*' and input[right + 1] == '/'):
+        elif comment and length != 1 and (input[right] == '*'  and input[right + 1] == '/'):
             right += 2
             left = right
             comment = False
@@ -153,6 +157,8 @@ def tokenize(input, counter):
                 break
 
             sub_string = get_sub_string(left, right, input)
+            if sub_string == '\n':
+                break
             token = get_next_token(input, right, sub_string)
             error = None
             if token is None:
@@ -160,13 +166,15 @@ def tokenize(input, counter):
                     comment = True
                     comment_line = counter
                     continue
-                if input[right + 1] == '/':
+                if input[right] == '*' and input[right + 1] == '/':
                     error = get_error(input[right: right + 2])
                     right += 2
                 else:
                     error = get_error(sub_string)
                 if error is not None:
                     errors.append(error)
+                    if error.message == constant.INVALID_INPUT and len(error.value) > 1:
+                        right = right + 1
                     total_errors.append(error)
             else:
                 tokens.append(token)
@@ -179,6 +187,7 @@ def tokenize(input, counter):
                 right += 1
             left = right
     if len(tokens) != 0:
+        has_token = True
         token_file.write(f"{counter}.\t")
         for token in tokens:
             token_file.write(f"({token.type}, {token.lexeme}) ")
@@ -186,7 +195,7 @@ def tokenize(input, counter):
     if len(errors) != 0:
         lexical_error_file.write(f"{counter}.\t")
         for error in errors:
-            lexical_error_file.write(f"({error.value}, {error.message})")
+            lexical_error_file.write(f"({error.value}, {error.message}) ")
         lexical_error_file.write("\n")
 
 
@@ -202,12 +211,17 @@ counter = 1
 # number_of_lines = len(file.readlines())
 comment_string = ""
 comment_line = 0
+has_token = False
 for line in file:
+    # if has_token and not(comment):
+    #     token_file.write("\n")
+    #     has_token = False
+
     tokenize(line, counter)
     counter += 1
 if comment:
     error = Error(comment_string[:7] + "...", constant.UNCLOSED_COMMENT)
-    lexical_error_file.write(f"({error.value}, {error.message})")
+    lexical_error_file.write(f"{comment_line}.\t({error.value}, {error.message}) ")
     lexical_error_file.write("\n")
     total_errors.append(error)
 if len(total_errors) == 0:
