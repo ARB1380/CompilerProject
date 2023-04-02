@@ -92,9 +92,13 @@ def get_next_token(input, right, sub_string):
 def is_invalid_equal(input):
     return re.search("[^0-9a-zA-Z\\s]",input) is not None
 
+def is_invalid_slash(input):
+    return re.search("[^0-9a-zA-Z\/\\s]",input) is not None
 
 def get_error(sub_string,input,right):
     if len(sub_string) == 1 and sub_string == "=" and is_invalid_equal(input[right + 1]):
+        return Error(sub_string + input[right + 1],constant.INVALID_INPUT)
+    if len(sub_string) == 1 and sub_string == "/" and is_invalid_slash(input[right + 1]):
         return Error(sub_string + input[right + 1],constant.INVALID_INPUT)
 
     if is_invalid_number(sub_string):
@@ -180,7 +184,7 @@ def tokenize(input, counter):
                     error = get_error(sub_string,input,right)
                 if error is not None:
                     if error.message == constant.INVALID_INPUT and len(error.value) > 1:
-                        if sub_string == "=":
+                        if sub_string == "=" or sub_string == "/":
                             right = right + 2
                         right = right + 1
                     if error.message == constant.INVALID_NUMBER:
