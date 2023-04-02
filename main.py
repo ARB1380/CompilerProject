@@ -1,5 +1,7 @@
 import re
 
+import constant
+
 
 class Token:
     def __init__(self, type, lexeme):
@@ -29,7 +31,7 @@ def is_symbol(input):
         or input == '[' or input == ']' or input == '(' \
         or input == ')' or input == '{' or input == '}' \
         or input == '+' or input == '-' or input == '*' \
-        or input == '=' or input == '<'
+        or input == '=' or input == '<' or input == '/'
 
 
 def is_number(input):
@@ -41,7 +43,7 @@ def is_identifier(input):
 
 
 def is_keyword(input):
-    return input == "if" or input == "else" or input == "void"\
+    return input == "if" or input == "else" or input == "void" \
         or input == "int" or input == "repeat" or input == "break" \
         or input == "until" or input == "return"
 
@@ -54,10 +56,22 @@ def is_invalid_input(input):
     return re.search("^[a-zA-Z0-9]*[^a-zA-Z0-9\\s]$", input) is not None
 
 
+def is_unclosed_comment(input):
+    return re.search("^[\/\*].*$", input) is not None
+
+
+def is_unmatched_comment(input):
+    return re.search("^[\*\/].*$", input) is not None
+
+
 def get_next_token(input, right, sub_string):
     if is_symbol(sub_string):
         if sub_string == '=' and input[right + 1] == '=':
             return Token("SYMBOL", "==")
+        if sub_string == '/' and input[right + 1] == '*':
+            return None
+        if sub_string == '*' and input[right + 1] == '/':
+            return None
         return Token("SYMBOL", sub_string)
 
     if is_number(sub_string):
@@ -74,10 +88,16 @@ def get_next_token(input, right, sub_string):
 
 def get_error(sub_string):
     if is_invalid_number(sub_string):
-        return Error(sub_string, "Invalid number")
+        return Error(sub_string, constant.INVALID_NUMBER)
 
     if is_invalid_input(sub_string):
-        return Error(sub_string, "Invalid input")
+        return Error(sub_string, constant.INVALID_INPUT)
+
+    if is_unclosed_comment(sub_string):
+        return Error(sub_string[:7] + "...", constant.UNCLOSED_COMMENT)
+
+    if is_unmatched_comment(sub_string):
+        return Error('*/', constant.UNMATCHED_COMMENT)
 
     return None
 
@@ -104,9 +124,20 @@ def tokenize(input, counter):
     length = len(input)
     left = 0
     right = 0
+    comment = false
     while left <= right <= length:
-        if right != length and is_letter_or_digit(input[right]):
-            right = right + 1
+        if comment and not (input[right] == '*' and input[right + 1] != '/'):
+            if right == length:
+                sub_string = get_sub_string(left, right, input)
+                error = get_error(sub_string)
+                if error is not None:
+                    errors.append(error)
+            right += 1
+        elif comment and (input[right] == '*' and input[right + 1] != '/'):
+            right += 1
+            left = right
+        elif right != length and is_letter_or_digit(input[right]):
+            right += 1
         else:
             if left == right == length:
                 break
@@ -114,6 +145,9 @@ def tokenize(input, counter):
             sub_string = get_sub_string(left, right, input)
             token = get_next_token(input, right, sub_string)
             if token is None:
+                if input[right] == '/':
+                    comment = true
+                    continue
                 error = get_error(sub_string)
                 if error is not None:
                     errors.append(error)
@@ -121,11 +155,11 @@ def tokenize(input, counter):
                 tokens.append(token)
                 add_to_symbol_table(token)
                 if token.lexeme == "==":
-                    left = left + 1
-                    right = right + 1
+                    left += 1
+                    right += 1
 
             if left == right:
-                right = right + 1
+                right += 1
             left = right
     if len(tokens) != 0:
         token_file.write(f"{counter}.")
@@ -149,10 +183,10 @@ symbols = {"if": "key", "else": "key", "break": "key",
 counter = 1
 for line in file:
     tokenize(line, counter)
-    counter = counter + 1
+    counter += 1
 
 counter = 1
 for symbol in symbols:
-        symbol_file.write(f"{counter}.{symbol}")
-        symbol_file.write("\n")
-        counter = counter + 1
+    symbol_file.write(f"{counter}.{symbol}")
+    symbol_file.write("\n")
+    counter += 1

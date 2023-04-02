@@ -1,0 +1,5 @@
+INVALID_NUMBER = "Invalid number"
+INVALID_INPUT = "Invalid input"
+UNMATCHED_COMMENT = "Unmatched comment"
+UNCLOSED_COMMENT = "Unclosed comment"
+INVALID_INPUT = "Invalid input"
