@@ -137,7 +137,7 @@ def tokenize(input, counter):
         if comment and not (input[right] == '*' and input[right + 1] == '/'):
             comment_string += input[right]
             if right == length - 2:
-                comment_string += input[right:]
+                comment_string += input[right + 1:]
                 break
 
             right += 1
@@ -159,7 +159,6 @@ def tokenize(input, counter):
                 if input[right] == '/' and input[right + 1] == '*':
                     comment = True
                     comment_line = counter
-                    comment_string = "/*"
                     continue
                 if input[right + 1] == '/':
                     error = get_error(input[right: right + 2])
