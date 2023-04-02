@@ -22,19 +22,27 @@ def is_letter_or_digit(input):
     return re.search("[a-zA-Z0-9]", input) is not None
 
 
+def is_letter(input):
+    return re.search("[a-zA-Z]", input) is not None
+
+
+def is_digit(input):
+    return re.search("[0-9]", input) is not None
+
+
 def is_symbol_or_blank(input):
     return input == ' ' or input == ';' or input == ':' or input == ',' \
-        or input == '[' or input == ']' or input == '(' or input == ')' \
-        or input == '{' or input == '}' or input == '+' or input == '-' \
-        or input == '=' or input == '*' or input == '<' or input == '\n' or input == '/'
+           or input == '[' or input == ']' or input == '(' or input == ')' \
+           or input == '{' or input == '}' or input == '+' or input == '-' \
+           or input == '=' or input == '*' or input == '<' or input == '\n' or input == '/'
 
 
 def is_symbol(input):
     return input == ';' or input == ':' or input == ',' \
-        or input == '[' or input == ']' or input == '(' \
-        or input == ')' or input == '{' or input == '}' \
-        or input == '+' or input == '-' or input == '*' \
-        or input == '=' or input == '<' or input == '/'
+           or input == '[' or input == ']' or input == '(' \
+           or input == ')' or input == '{' or input == '}' \
+           or input == '+' or input == '-' or input == '*' \
+           or input == '=' or input == '<' or input == '/'
 
 
 def is_number(input):
@@ -47,12 +55,12 @@ def is_identifier(input):
 
 def is_keyword(input):
     return input == "if" or input == "else" or input == "void" \
-        or input == "int" or input == "repeat" or input == "break" \
-        or input == "until" or input == "return"
+           or input == "int" or input == "repeat" or input == "break" \
+           or input == "until" or input == "return"
 
 
 def is_invalid_number(input):
-    return re.search("^[0-9]+[a-zA-Z][0-9a-zA-Z]*$", input) is not None
+    return re.search("^[0-9]+[a-zA-Z]$", input) is not None
 
 
 def is_invalid_input(input):
@@ -130,62 +138,76 @@ def tokenize(input, counter):
     length = len(input)
     left = 0
     right = 0
+    number = False
     global comment
     global comment_line
     global comment_string
     global has_token
-    while left <= right <= length:
+    while left <= right < length:
         if comment and length == 1:
             comment_string += input[0]
             break
-        if comment and length != 1 and not (input[right] == '*'  and input[right + 1] == '/'):
+        if comment and length != 1 and not (input[right] == '*' and input[right + 1] == '/'):
             comment_string += input[right]
             if right == length - 2:
                 comment_string += input[right + 1:]
                 break
 
             right += 1
-        elif comment and length != 1 and (input[right] == '*'  and input[right + 1] == '/'):
+        elif comment and length != 1 and (input[right] == '*' and input[right + 1] == '/'):
             right += 2
             left = right
             comment = False
             comment_string = ""
-        elif right != length and is_letter_or_digit(input[right]):
-            right += 1
         else:
-            if left == right == length:
-                break
-
-            sub_string = get_sub_string(left, right, input)
-            if sub_string == '\n':
-                break
-            token = get_next_token(input, right, sub_string)
-            error = None
-            if token is None:
-                if input[right] == '/' and input[right + 1] == '*':
-                    comment = True
-                    comment_line = counter
-                    continue
-                if input[right] == '*' and input[right + 1] == '/':
-                    error = get_error(input[right: right + 2])
-                    right += 2
-                else:
+            if right == left:
+                if is_digit(input[right]):
+                    number = True
+            if right != length and is_letter_or_digit(input[right]):
+                if is_letter(input[right]) and number:
+                    sub_string = get_sub_string(left, right, input)
                     error = get_error(sub_string)
-                if error is not None:
-                    errors.append(error)
-                    if error.message == constant.INVALID_INPUT and len(error.value) > 1:
-                        right = right + 1
                     total_errors.append(error)
-            else:
-                tokens.append(token)
-                add_to_symbol_table(token)
-                if token.lexeme == "==":
-                    left += 1
+                    errors.append(error)
                     right += 1
+                    left = right
+                    number = False
+                else:
+                    right += 1
+            else:
+                if left == right == length:
+                    break
 
-            if left == right:
-                right += 1
-            left = right
+                sub_string = get_sub_string(left, right, input)
+                if sub_string == '\n':
+                    break
+                token = get_next_token(input, right, sub_string)
+                error = None
+                if token is None:
+                    if input[right] == '/' and input[right + 1] == '*':
+                        comment = True
+                        comment_line = counter
+                        continue
+                    if input[right] == '*' and input[right + 1] == '/':
+                        error = get_error(input[right: right + 2])
+                        right += 2
+                    else:
+                        error = get_error(sub_string)
+                    if error is not None:
+                        errors.append(error)
+                        if error.message == constant.INVALID_INPUT and len(error.value) > 1:
+                            right = right + 1
+                        total_errors.append(error)
+                else:
+                    tokens.append(token)
+                    add_to_symbol_table(token)
+                    if token.lexeme == "==":
+                        left += 1
+                        right += 1
+
+                if left == right:
+                    right += 1
+                left = right
     if len(tokens) != 0:
         has_token = True
         token_file.write(f"{counter}.\t")
