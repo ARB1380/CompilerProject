@@ -124,7 +124,7 @@ def tokenize(input, counter):
     length = len(input)
     left = 0
     right = 0
-    comment = false
+    comment = False
     while left <= right <= length:
         if comment and not (input[right] == '*' and input[right + 1] != '/'):
             if right == length:
@@ -146,7 +146,7 @@ def tokenize(input, counter):
             token = get_next_token(input, right, sub_string)
             if token is None:
                 if input[right] == '/':
-                    comment = true
+                    comment = True
                     continue
                 error = get_error(sub_string)
                 if error is not None:
