@@ -26,7 +26,7 @@ def is_symbol_or_blank(input):
     return input == ' ' or input == ';' or input == ':' or input == ',' \
         or input == '[' or input == ']' or input == '(' or input == ')' \
         or input == '{' or input == '}' or input == '+' or input == '-' \
-        or input == '=' or input == '*' or input == '<' or input == '\n'
+        or input == '=' or input == '*' or input == '<' or input == '\n' or input == '/'
 
 
 def is_symbol(input):
@@ -60,18 +60,18 @@ def is_invalid_input(input):
 
 
 def is_unclosed_comment(input):
-    return re.search("^[\/\*].*$", input) is not None
+    return re.search("^\/\*.*$", input) is not None
 
 
 def is_unmatched_comment(input):
-    return re.search("^[\*\/].*$", input) is not None
+    return re.search("^\*\/.*$", input) is not None
 
 
 def get_next_token(input, right, sub_string):
     if is_symbol(sub_string):
         if sub_string == '=' and input[right + 1] == '=':
             return Token("SYMBOL", "==")
-        if sub_string == '/' and input[right + 1] == '*':
+        if sub_string == '/':
             return None
         if sub_string == '*' and input[right + 1] == '/':
             return None
@@ -121,25 +121,31 @@ def add_to_symbol_table(token):
             symbols[token.lexeme] = token.type
 
 
+comment = False
+
+
 def tokenize(input, counter):
     tokens = []
     errors = []
     length = len(input)
     left = 0
     right = 0
-    comment = False
+    global comment
+    global comment_line
+    global comment_string
     while left <= right <= length:
-        if comment and not (input[right] == '*' and input[right + 1] != '/'):
-            if right == length:
-                sub_string = get_sub_string(left, right, input)
-                error = get_error(sub_string)
-                if error is not None:
-                    errors.append(error)
-                    total_errors.append(error)
+        if comment and not (input[right] == '*' and input[right + 1] == '/'):
+            comment_string += input[right]
+            if right == length - 2:
+                comment_string += input[right:]
+                break
+
             right += 1
-        elif comment and (input[right] == '*' and input[right + 1] != '/'):
-            right += 1
+        elif comment and (input[right] == '*' and input[right + 1] == '/'):
+            right += 2
             left = right
+            comment = False
+            comment_string = ""
         elif right != length and is_letter_or_digit(input[right]):
             right += 1
         else:
@@ -148,11 +154,18 @@ def tokenize(input, counter):
 
             sub_string = get_sub_string(left, right, input)
             token = get_next_token(input, right, sub_string)
+            error = None
             if token is None:
-                if input[right] == '/':
+                if input[right] == '/' and input[right + 1] == '*':
                     comment = True
+                    comment_line = counter
+                    comment_string = "/*"
                     continue
-                error = get_error(sub_string)
+                if input[right + 1] == '/':
+                    error = get_error(input[right: right + 2])
+                    right += 2
+                else:
+                    error = get_error(sub_string)
                 if error is not None:
                     errors.append(error)
                     total_errors.append(error)
@@ -187,10 +200,17 @@ symbols = {"break": "key", "else": "key", "if": "key",
            "int": "key", "repeat": "key", "return": "key",
            "until": "key", "void": "key"}
 counter = 1
+# number_of_lines = len(file.readlines())
+comment_string = ""
+comment_line = 0
 for line in file:
     tokenize(line, counter)
     counter += 1
-
+if comment:
+    error = Error(comment_string[:7] + "...", constant.UNCLOSED_COMMENT)
+    lexical_error_file.write(f"({error.value}, {error.message})")
+    lexical_error_file.write("\n")
+    total_errors.append(error)
 if len(total_errors) == 0:
     lexical_error_file.write("There is no lexical error")
 
