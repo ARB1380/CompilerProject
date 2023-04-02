@@ -162,12 +162,12 @@ def tokenize(input, counter):
                 right += 1
             left = right
     if len(tokens) != 0:
-        token_file.write(f"{counter}.")
+        token_file.write(f"{counter}.\t")
         for token in tokens:
-            token_file.write(f"({token.type}, {token.lexeme})")
+            token_file.write(f"({token.type}, {token.lexeme}) ")
         token_file.write("\n")
     if len(errors) != 0:
-        lexical_error_file.write(f"{counter}.")
+        lexical_error_file.write(f"{counter}.\t")
         for error in errors:
             lexical_error_file.write(f"({error.value}, {error.message})")
         lexical_error_file.write("\n")
@@ -177,9 +177,9 @@ file = open("input.txt", "r")
 token_file = open("tokens.txt", "a")
 symbol_file = open("symbol_table.txt", "a")
 lexical_error_file = open("lexical_errors.txt", "a")
-symbols = {"if": "key", "else": "key", "break": "key",
-           "until": "key", "void": "key", "int": "key",
-           "repeat": "key", "return": "key"}
+symbols = {"break": "key", "if": "key", "else": "key",
+           "int": "key", "repeat": "key", "return": "key",
+           "until": "key", "void": "key"}
 counter = 1
 for line in file:
     tokenize(line, counter)
@@ -187,6 +187,6 @@ for line in file:
 
 counter = 1
 for symbol in symbols:
-    symbol_file.write(f"{counter}.{symbol}")
+    symbol_file.write(f"{counter}.{symbol}\t")
     symbol_file.write("\n")
     counter += 1
