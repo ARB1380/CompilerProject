@@ -177,7 +177,7 @@ file = open("input.txt", "r")
 token_file = open("tokens.txt", "a")
 symbol_file = open("symbol_table.txt", "a")
 lexical_error_file = open("lexical_errors.txt", "a")
-symbols = {"break": "key", "if": "key", "else": "key",
+symbols = {"break": "key", "else": "key", "if": "key",
            "int": "key", "repeat": "key", "return": "key",
            "until": "key", "void": "key"}
 counter = 1
@@ -187,6 +187,6 @@ for line in file:
 
 counter = 1
 for symbol in symbols:
-    symbol_file.write(f"{counter}.{symbol}\t")
+    symbol_file.write(f"{counter}.\t{symbol}")
     symbol_file.write("\n")
     counter += 1
