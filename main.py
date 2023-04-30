@@ -41,72 +41,66 @@ def is_keyword(input):
     return input in keywords
 
 
+def start(type):
+    complete_dfa.current_state += 1
+    complete_dfa.type = type
+
+
+def get_token(type, lexeme):
+    reset_dfa()
+    if type == "ID" and is_keyword(lexeme):
+        return Token("KEYWORD", lexeme)
+    return Token(type, lexeme)
+
+
 def get_next_token(input):
     global current_index
     start_index = current_index
     while current_index != len(input):
         if is_digit(input[current_index]):
             if is_in_initial_state():
-                complete_dfa.current_state += 1
-                complete_dfa.type = "number"
+                start("number")
             elif is_in_special_state(3, "comment"):
                 complete_dfa.current_state -= 1
             current_index += 1
         elif is_letter(input[current_index]):
             if is_in_initial_state():
-                complete_dfa.current_state += 1
-                complete_dfa.type = "identifier"
+                start("identifier")
             elif is_in_special_state(3, "comment"):
                 complete_dfa.current_state -= 1
             elif is_in_special_state(1, "number"):
-                reset_dfa()
-                return Token("NUM", input[start_index: current_index])
+                return get_token("NUM", input[start_index: current_index])
             current_index += 1
         elif is_symbol(input[current_index]):
             if is_in_initial_state():
-                if input[current_index] == '/':
-                    complete_dfa.current_state += 1
-                    complete_dfa.type = "comment"
-                    current_index += 1
+                copy_current_index = current_index
+                current_index += 1
+                if input[copy_current_index] == '/':
+                    start("comment")
                 else:
-                    result = input[current_index]
-                    current_index += 1
-                    return Token("SYMBOL", result)
+                    token = input[copy_current_index]
+                    return get_token("SYMBOL", token)
 
             elif is_in_special_state(1, "number"):
-                reset_dfa()
-                return Token("NUM", input[start_index: current_index])
+                return get_token("NUM", input[start_index: current_index])
             elif is_in_special_state(1, "identifier"):
-                reset_dfa()
-                if is_keyword(input[start_index: current_index]):
-                    return Token("KEYWORD", input[start_index: current_index])
-                return Token("ID", input[start_index: current_index])
+                return get_token("ID", input[start_index: current_index])
         elif is_white_space(input[current_index]):
             if is_in_special_state(1, "number"):
-                reset_dfa()
-                return Token("NUM", input[start_index: current_index])
+                return get_token("NUM", input[start_index: current_index])
             if is_in_special_state(1, "identifier"):
-                reset_dfa()
-                if is_keyword(input[start_index: current_index]):
-                    return Token("KEYWORD", input[start_index: current_index])
-                return Token("ID", input[start_index: current_index])
+                return get_token("ID", input[start_index: current_index])
             current_index += 1
             start_index = current_index
         elif input[current_index] == '\n':
-            if is_in_special_state(1, "number"):
-                reset_dfa()
-                result = input[start_index : current_index]
-                current_index += 1
-                return Token("NUM", result)
-            if is_in_special_state(1,"identifier"):
-                reset_dfa()
-                if is_keyword(input[start_index: current_index]):
-                    result = input[start_index : current_index]
-                    current_index += 1
-                    return Token("KEYWORD", result)
-                current_index += 1
-                return Token("ID", input[start_index: current_index])
+            copy_current_index = current_index
             current_index += 1
+            if is_in_special_state(1, "number"):
+                token = get_token("NUM", input[start_index: copy_current_index])
+                return token
+            if is_in_special_state(1, "identifier"):
+                token = get_token("ID", input[start_index: copy_current_index])
+                return token
             return None
 
 
