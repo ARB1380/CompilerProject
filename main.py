@@ -55,9 +55,11 @@ def get_token(type, lexeme):
         keywords_and_identifiers.append(lexeme)
     return Token(type, lexeme)
 
+
 def append_error(text, lexeme):
     reset_dfa()
     errors_in_a_line.append(Error(text, lexeme))
+
 
 def get_lexeme(input, start_index, end_index):
     return input[start_index : end_index]
@@ -150,17 +152,10 @@ lexical_error_file = open("lexical_errors.txt", "a")
 complete_dfa = dfa("", 0)
 symbols = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<', '/'}
 total_errors = []
-keywords = {"break", "else", "if",
-            "int", "repeat", "return",
-            "until", "void"}
-keywords_and_identifiers = ["break", "else", "if",
-            "int", "repeat", "return",
-            "until", "void"
-]
+keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
+keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
 current_index = 0
-# s = "int x = 2"
-# while current_index != len(s):
-#     print(f"lemxeme is : {get_next_token(s).lexeme}")
+
 counter = 1
 for line in file:
     tokens_in_a_line = []
