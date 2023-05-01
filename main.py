@@ -51,11 +51,13 @@ def get_token(type, lexeme):
     reset_dfa()
     if type == "ID" and is_keyword(lexeme):
         return Token("KEYWORD", lexeme)
+    if type == "ID" and not lexeme in keywords_and_identifiers:
+        keywords_and_identifiers.append(lexeme)
     return Token(type, lexeme)
 
 def append_error(text, lexeme):
     reset_dfa()
-    total_errors.append(Error(text, lexeme))
+    errors_in_a_line.append(Error(text, lexeme))
 
 def get_lexeme(input, start_index, end_index):
     return input[start_index : end_index]
@@ -81,6 +83,7 @@ def get_next_token(input):
                 complete_dfa.current_state -= 1
             elif is_in_special_state(1, "number"):
                 append_error("Invalid number", get_lexeme(input, start_index, current_index + 1))
+                start_index = current_index + 1
             current_index += 1
         elif is_symbol(input[current_index]):
             if is_in_initial_state():
@@ -88,6 +91,7 @@ def get_next_token(input):
                 current_index += 1
                 if input[copy_current_index] == '/':
                     append_error("Invalid Input", "/")
+                    start_index = current_index
                 elif input[copy_current_index] == '=':
                     if input[current_index] == '=':
                         current_index += 1
@@ -95,6 +99,7 @@ def get_next_token(input):
                     elif is_invalid_character(input[current_index]):
                         current_index += 1
                         append_error("Invalid Input", get_lexeme(input, start_index, current_index))
+                        start_index = current_index
                     else:
                         return get_token("SYMBOL", "=")
                 else:
@@ -125,6 +130,15 @@ def get_next_token(input):
         else:
             append_error("Invalid input", get_lexeme(input, start_index, current_index + 1))
             current_index += 1
+            start_index = current_index
+    if current_index - 1 != '\n':
+        if is_in_special_state(1, "number"):
+            token = get_token("NUM", get_lexeme(input, start_index, current_index))
+            return token
+        if is_in_special_state(1, "identifier"):
+            token = get_token("ID", get_lexeme(input, start_index, current_index))
+            return token
+
 
 
 
@@ -139,6 +153,10 @@ total_errors = []
 keywords = {"break", "else", "if",
             "int", "repeat", "return",
             "until", "void"}
+keywords_and_identifiers = ["break", "else", "if",
+            "int", "repeat", "return",
+            "until", "void"
+]
 current_index = 0
 # s = "int x = 2"
 # while current_index != len(s):
@@ -146,6 +164,7 @@ current_index = 0
 counter = 1
 for line in file:
     tokens_in_a_line = []
+    errors_in_a_line = []
     while current_index != len(line):
         result = get_next_token(line)
         if result != None:
@@ -156,8 +175,15 @@ for line in file:
         for token in tokens_in_a_line:
             token_file.write(f"({token.type}, {token.lexeme}) ")
         token_file.write("\n")
+    if len(errors_in_a_line) != 0:
+        lexical_error_file.write(f"{counter}.\t")
+        for error in errors_in_a_line:
+            lexical_error_file.write(f"({error.text}, {error.lexeme}) ")
+        lexical_error_file.write("\n")
+
     counter += 1
     current_index = 0
+
 
 # if comment:
 #     error = Error(comment_string[:7] + "...", constant.UNCLOSED_COMMENT)
@@ -167,8 +193,8 @@ for line in file:
 # if len(total_errors) == 0:
 #     lexical_error_file.write("There is no lexical error.")
 #
-# counter = 1
-# for symbol in symbols:
-#     symbol_file.write(f"{counter}.\t{symbol}")
-#     symbol_file.write("\n")
-#     counter += 1
+counter = 1
+for symbol in keywords_and_identifiers:
+    symbol_file.write(f"{counter}.\t{symbol}")
+    symbol_file.write("\n")
+    counter += 1
