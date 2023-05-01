@@ -133,6 +133,7 @@ def get_next_token(input):
             append_error("Invalid input", get_lexeme(input, start_index, current_index + 1))
             current_index += 1
             start_index = current_index
+    # these codes ore for handling last line in a file
     if current_index - 1 != '\n':
         if is_in_special_state(1, "number"):
             token = get_token("NUM", get_lexeme(input, start_index, current_index))
