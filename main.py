@@ -79,7 +79,7 @@ def is_invalid_character(character):
 
 
 def get_next_token(input):
-    global current_index
+    global current_index, comment_string, line_counter
     start_index = current_index
     while current_index != len(input):
         if is_digit(input[current_index]):
@@ -96,31 +96,46 @@ def get_next_token(input):
             elif is_in_special_state(1, "number"):
                 append_error("Invalid number", get_lexeme(input, start_index, current_index + 1))
                 start_index = current_index + 1
+            if complete_dfa.type == "comment":
+                comment_string += input[current_index]
             current_index += 1
-        elif is_slash(input[current_index]):
-            if is_in_initial_state():
-                start("comment")
-            current_index += 1
-            if is_in_special_state(3, "comment"):
-                reset_dfa()
-                start_index = current_index
+
         elif is_symbol(input[current_index]):
             if is_in_initial_state():
                 copy_current_index = current_index
                 current_index += 1
                 if input[copy_current_index] == '/':
-                    append_error("Invalid Input", "/")
-                    start_index = current_index
+                    if current_index != len(input) and input[current_index] == '*':
+                        start("comment")
+                        comment_string += "/"
+                    elif is_in_special_state(3, "comment"):
+                        reset_dfa()
+                        start_index = current_index
+                        comment_string = ""
+                        line_counter = None
+                    elif input[current_index] == " " or input[current_index] == "\n":
+                        append_error("Invalid input", "/")
+                        start_index = current_index
+                    elif not is_symbol(input[current_index]):
+                        continue
+                    else:
+                        append_error("Invalid input", "/")
+                        start_index = current_index
                 elif input[copy_current_index] == '=':
                     if input[current_index] == '=':
                         current_index += 1
                         return get_token("SYMBOL", "==")
                     elif is_invalid_character(input[current_index]):
                         current_index += 1
-                        append_error("Invalid Input", get_lexeme(input, start_index, current_index))
+                        append_error("Invalid input", get_lexeme(input, start_index, current_index))
                         start_index = current_index
                     else:
                         return get_token("SYMBOL", "=")
+
+                elif (input[copy_current_index] == "*" and not is_white_space(input[current_index])):
+                    append_error(constant.UNMATCHED_COMMENT, get_lexeme(input, start_index, current_index + 1))
+                    current_index += 1
+                    start_index = current_index
                 else:
                     token = input[copy_current_index]
                     return get_token("SYMBOL", token)
@@ -131,9 +146,19 @@ def get_next_token(input):
                 return get_token("ID", get_lexeme(input, start_index, current_index))
             elif is_in_special_state(1, "comment") and is_star(input[current_index]):
                 complete_dfa.current_state += 1
+                comment_string += "*"
                 current_index += 1
+
             elif is_in_special_state(2, "comment") and is_star(input[current_index]):
                 complete_dfa.current_state += 1
+                current_index += 1
+            elif is_in_special_state(3, "comment") and is_slash(input[current_index]):
+                reset_dfa()
+                comment_string = ""
+                line_counter = None
+                current_index += 1
+                start_index = current_index
+            else:
                 current_index += 1
         elif is_white_space(input[current_index]):
             if is_in_special_state(1, "number"):
@@ -142,6 +167,7 @@ def get_next_token(input):
                 return get_token("ID", get_lexeme(input, start_index, current_index))
             current_index += 1
             if is_in_special_state(2, "comment"):
+                comment_string += " "
                 continue
             start_index = current_index
         elif input[current_index] == '\n':
@@ -154,7 +180,13 @@ def get_next_token(input):
                 token = get_token("ID", get_lexeme(input, start_index, copy_current_index))
                 return token
             return None
+        elif input[current_index] == '\t':
+            current_index += 1
+            start_index = current_index;
         else:
+            if is_in_special_state(2, "comment"):
+                current_index += 1
+                continue
             append_error("Invalid input", get_lexeme(input, start_index, current_index + 1))
             current_index += 1
             start_index = current_index
@@ -178,8 +210,10 @@ total_errors = []
 keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
 keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
 current_index = 0
-
+lexical_error = False
 counter = 1
+comment_string = ""
+line_counter = None
 for line in file:
     tokens_in_a_line = []
     errors_in_a_line = []
@@ -194,22 +228,25 @@ for line in file:
             token_file.write(f"({token.type}, {token.lexeme}) ")
         token_file.write("\n")
     if len(errors_in_a_line) != 0:
+        if not lexical_error:
+            lexical_error = True
         lexical_error_file.write(f"{counter}.\t")
         for error in errors_in_a_line:
-            lexical_error_file.write(f"({error.text}, {error.lexeme}) ")
+            lexical_error_file.write(f"({error.lexeme}, {error.text}) ")
         lexical_error_file.write("\n")
-
+    if (line_counter == None and complete_dfa.type == "comment"):
+        line_counter = counter
     counter += 1
     current_index = 0
 
-# if comment:
-#     error = Error(comment_string[:7] + "...", constant.UNCLOSED_COMMENT)
-#     lexical_error_file.write(f"{comment_line}.\t({error.value}, {error.message}) ")
-#     lexical_error_file.write("\n")
-#     total_errors.append(error)
-# if len(total_errors) == 0:
-#     lexical_error_file.write("There is no lexical error.")
-#
+if complete_dfa.type == "comment":
+    error = Error(constant.UNCLOSED_COMMENT, comment_string[:7] + "...")
+    lexical_error_file.write(f"{line_counter}.\t({error.lexeme}, {error.text}) ")
+    lexical_error_file.write("\n")
+    total_errors.append(error)
+if not lexical_error:
+    lexical_error_file.write("There is no lexical error.")
+
 counter = 1
 for symbol in keywords_and_identifiers:
     symbol_file.write(f"{counter}.\t{symbol}")
