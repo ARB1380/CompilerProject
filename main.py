@@ -34,6 +34,14 @@ def is_symbol(character):
     return character in symbols
 
 
+def is_slash(character):
+    return character == '/'
+
+
+def is_star(character):
+    return character == '*'
+
+
 def is_white_space(character):
     return character == ' '
 
@@ -62,10 +70,12 @@ def append_error(text, lexeme):
 
 
 def get_lexeme(input, start_index, end_index):
-    return input[start_index : end_index]
+    return input[start_index: end_index]
+
 
 def is_invalid_character(character):
-    return not is_digit(character) and not is_letter(character) and not is_symbol(character) and not is_white_space(character)
+    return not is_digit(character) and not is_letter(character) and not is_symbol(character) and not is_white_space(
+        character)
 
 
 def get_next_token(input):
@@ -87,6 +97,13 @@ def get_next_token(input):
                 append_error("Invalid number", get_lexeme(input, start_index, current_index + 1))
                 start_index = current_index + 1
             current_index += 1
+        elif is_slash(input[current_index]):
+            if is_in_initial_state():
+                start("comment")
+            current_index += 1
+            if is_in_special_state(3, "comment"):
+                reset_dfa()
+                start_index = current_index
         elif is_symbol(input[current_index]):
             if is_in_initial_state():
                 copy_current_index = current_index
@@ -112,12 +129,20 @@ def get_next_token(input):
                 return get_token("NUM", get_lexeme(input, start_index, current_index))
             elif is_in_special_state(1, "identifier"):
                 return get_token("ID", get_lexeme(input, start_index, current_index))
+            elif is_in_special_state(1, "comment") and is_star(input[current_index]):
+                complete_dfa.current_state += 1
+                current_index += 1
+            elif is_in_special_state(2, "comment") and is_star(input[current_index]):
+                complete_dfa.current_state += 1
+                current_index += 1
         elif is_white_space(input[current_index]):
             if is_in_special_state(1, "number"):
-                return get_token("NUM", get_lexeme(input,start_index, current_index))
+                return get_token("NUM", get_lexeme(input, start_index, current_index))
             if is_in_special_state(1, "identifier"):
                 return get_token("ID", get_lexeme(input, start_index, current_index))
             current_index += 1
+            if is_in_special_state(2, "comment"):
+                continue
             start_index = current_index
         elif input[current_index] == '\n':
             copy_current_index = current_index
@@ -141,9 +166,6 @@ def get_next_token(input):
         if is_in_special_state(1, "identifier"):
             token = get_token("ID", get_lexeme(input, start_index, current_index))
             return token
-
-
-
 
 
 file = open("input.txt", "r")
@@ -179,7 +201,6 @@ for line in file:
 
     counter += 1
     current_index = 0
-
 
 # if comment:
 #     error = Error(comment_string[:7] + "...", constant.UNCLOSED_COMMENT)
