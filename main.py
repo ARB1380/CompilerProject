@@ -2,6 +2,7 @@
 # Alireza Farshi 99101976
 
 import re
+from anytree import Node, RenderTree
 
 import constant
 from dfa import dfa
@@ -66,7 +67,7 @@ def get_token(type, lexeme):
 
 def append_error(text, lexeme):
     reset_dfa()
-    errors_in_a_line.append(Error(text, lexeme))
+    # errors_in_a_line.append(Error(text, lexeme))
 
 
 def get_lexeme(input, start_index, end_index):
@@ -200,55 +201,148 @@ def get_next_token(input):
             return token
 
 
-file = open("input.txt", "r")
-token_file = open("tokens.txt", "a")
-symbol_file = open("symbol_table.txt", "a")
-lexical_error_file = open("lexical_errors.txt", "a")
+# file = open("input.txt", "r")
+# token_file = open("tokens.txt", "a")
+# symbol_file = open("symbol_table.txt", "a")
+# lexical_error_file = open("lexical_errors.txt", "a")
 complete_dfa = dfa("", 0)
 symbols = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<', '/'}
-total_errors = []
+# total_errors = []
 keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
 keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
-current_index = 0
-lexical_error = False
-counter = 1
-comment_string = ""
-line_counter = None
-for line in file:
-    tokens_in_a_line = []
-    errors_in_a_line = []
-    while current_index != len(line):
-        result = get_next_token(line)
-        if result != None:
-            tokens_in_a_line.append(result)
-            print(f"lexeme is :{result.lexeme}")
-    if len(tokens_in_a_line) != 0:
-        token_file.write(f"{counter}.\t")
-        for token in tokens_in_a_line:
-            token_file.write(f"({token.type}, {token.lexeme}) ")
-        token_file.write("\n")
-    if len(errors_in_a_line) != 0:
-        if not lexical_error:
-            lexical_error = True
-        lexical_error_file.write(f"{counter}.\t")
-        for error in errors_in_a_line:
-            lexical_error_file.write(f"({error.lexeme}, {error.text}) ")
-        lexical_error_file.write("\n")
-    if (line_counter == None and complete_dfa.type == "comment"):
-        line_counter = counter
-    counter += 1
-    current_index = 0
+current_index = 5
+# lexical_error = False
+# counter = 1
+# comment_string = ""
+# line_counter = None
+# for line in file:
+#     tokens_in_a_line = []
+#     errors_in_a_line = []
+#     while current_index != len(line):
+#         result = get_next_token(line)
+#         if result != None:
+#             tokens_in_a_line.append(result)
+#             print(f"lexeme is :{result.lexeme}")
+#     if len(tokens_in_a_line) != 0:
+#         token_file.write(f"{counter}.\t")
+#         for token in tokens_in_a_line:
+#             token_file.write(f"({token.type}, {token.lexeme}) ")
+#         token_file.write("\n")
+#     if len(errors_in_a_line) != 0:
+#         if not lexical_error:
+#             lexical_error = True
+#         lexical_error_file.write(f"{counter}.\t")
+#         for error in errors_in_a_line:
+#             lexical_error_file.write(f"({error.lexeme}, {error.text}) ")
+#         lexical_error_file.write("\n")
+#     if (line_counter == None and complete_dfa.type == "comment"):
+#         line_counter = counter
+#     counter += 1
+#     current_index = 0
+#
+# if complete_dfa.type == "comment":
+#     error = Error(constant.UNCLOSED_COMMENT, comment_string[:7] + "...")
+#     lexical_error_file.write(f"{line_counter}.\t({error.lexeme}, {error.text}) ")
+#     lexical_error_file.write("\n")
+#     total_errors.append(error)
+# if not lexical_error:
+#     lexical_error_file.write("There is no lexical error.")
+#
+# counter = 1
+# for symbol in keywords_and_identifiers:
+#     symbol_file.write(f"{counter}.\t{symbol}")
+#     symbol_file.write("\n")
+#     counter += 1
 
-if complete_dfa.type == "comment":
-    error = Error(constant.UNCLOSED_COMMENT, comment_string[:7] + "...")
-    lexical_error_file.write(f"{line_counter}.\t({error.lexeme}, {error.text}) ")
-    lexical_error_file.write("\n")
-    total_errors.append(error)
-if not lexical_error:
-    lexical_error_file.write("There is no lexical error.")
 
-counter = 1
-for symbol in keywords_and_identifiers:
-    symbol_file.write(f"{counter}.\t{symbol}")
-    symbol_file.write("\n")
-    counter += 1
+
+first_set = {
+    'Type': ['id', 'array', 'integer', 'char', 'num'],
+    'Simple': ['integer', 'char', 'num']
+}
+
+follow_set = {
+    'Type': ['$'],
+    'Simple': ['$', ']']
+}
+nodes = []
+nodes_value = []
+
+
+def Type():
+    if lookahead in first_set['Simple']:
+        nodes.append(Node("simple", parent= nodes[get_parent("type")]))
+        nodes_value.append("simple")
+        Simple()
+    elif lookahead == 'id':
+        nodes.append(Node("id", parent=nodes[get_parent("type")]))
+        nodes_value.append("id")
+        Match('id')
+    elif lookahead == 'array':
+        nodes.append(Node("array", parent= nodes[get_parent("type")]))
+        nodes_value.append("array")
+        Match('array')
+        nodes.append(Node("[", parent=nodes[get_parent("type")]))
+        nodes_value.append("[")
+        Match('[')
+        nodes.append(Node("simple", parent=nodes[get_parent("type")]))
+        nodes_value.append("simple")
+        Simple()
+        nodes.append(Node("]", parent=nodes[get_parent("type")]))
+        nodes_value.append("]")
+        Match(']')
+        nodes.append(Node("of", parent=nodes[get_parent("type")]))
+        nodes_value.append("of")
+        Match('of')
+        nodes.append(Node("type", parent=nodes[get_parent("type")]))
+        nodes_value.append("type")
+        Type()
+
+
+
+
+
+def Simple():
+    if lookahead == 'integer':
+        nodes.append(Node("integer", parent=nodes[get_parent("simple")]))
+        nodes_value.append("integer")
+        Match('integer')
+    elif lookahead == 'char':
+        nodes.append(Node("char", parent=nodes[get_parent("simple")]))
+        nodes_value.append("char")
+        Match('char')
+    elif lookahead == 'num':
+        nodes.append(Node("num", parent=nodes[get_parent("simple")]))
+        nodes_value.append("num")
+        Match('num')
+        nodes.append(Node("dotdot", parent=nodes[get_parent("simple")]))
+        nodes_value.append("dotdot")
+        Match('dotdot')
+        nodes.append(Node("num", parent=nodes[get_parent("simple")]))
+        nodes_value.append("num")
+        Match('num')
+
+def Match(expected_token):
+    global lookahead
+    if lookahead == expected_token:
+        token = get_next_token(input)
+        if token != None:
+            lookahead = token.lexeme
+
+
+
+def get_parent(value):
+    for i in range(len(nodes_value) - 1, -1, -1):
+        if nodes_value[i] == value:
+            return i
+        continue
+
+
+input = "array [ num dotdot num ] of integer"
+lookahead = "array"
+start_node = Node("type")
+nodes.append(start_node)
+nodes_value.append("type")
+Type()
+for pre, fill, node in RenderTree(start_node):
+    print("%s%s" % (pre, node.name))
