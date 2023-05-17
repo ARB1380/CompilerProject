@@ -196,14 +196,6 @@ def get_next_token(input):
             current_index += 1
             start_index = current_index
     return get_token("X","$")
-    # these codes ore for handling last line in a file
-    # if current_index - 1 != '\n':
-    #     if is_in_special_state(1, "number"):
-    #         token = get_token("NUM", get_lexeme(input, start_index, current_index))
-    #         return token
-    #     if is_in_special_state(1, "identifier"):
-    #         token = get_token("ID", get_lexeme(input, start_index, current_index))
-    #         return token
 
 
 file = open("input.txt", "r")
@@ -278,6 +270,7 @@ for line in lines:
     line = line.strip()
     rule = line.split('->')
     rules[rule[0]] = rule[1]
+#parse table code
 parse_table = {}
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
@@ -312,6 +305,7 @@ for non_terminal, productions in rules.items():
                     if moves_to_epsilon:
                         for terminal in follow_dict[non_terminal]:
                             parse_table[(non_terminal, terminal)] = production
+#parse tree code
 stack = []
 start_node = Node("Program")
 end_node = Node("$")
@@ -341,21 +335,16 @@ while len(stack) != 0:
     elif node.name in terminals:
         removed_token = stack.pop()
         removed_token.name = f'({token.type}, {token.lexeme})'
-        #print(f'removed token is :{removed_token.name.lexeme}')
         token = get_next_token(input1)
     else:
         stack.pop()
+
+
 end_node.parent = start_node
 file = open("parse_tree.txt", "w", encoding="utf-8")
 for pre, _, node in RenderTree(start_node):
     file.write(("%s%s" % (pre, node.name)) + "\n")
 file.close()
-# parse_tree_file = open('parse_tree.txt','w')
-#
-# for pre, fill, node in RenderTree(start_node):
-#     result_string += f'{(pre,node.name)}\n'
-#     print("%s%s" % (pre, node.name))
-# parse_tree_file.write(result_string)
 
 
 
