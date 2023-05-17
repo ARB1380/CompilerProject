@@ -2,6 +2,7 @@
 # Alireza Farshi 99101976
 
 import re
+import json
 from anytree import Node, RenderTree
 
 import constant
@@ -67,7 +68,7 @@ def get_token(type, lexeme):
 
 def append_error(text, lexeme):
     reset_dfa()
-    errors_in_a_line.append(Error(text, lexeme))
+    #errors_in_a_line.append(Error(text, lexeme))
 
 
 def get_lexeme(input, start_index, end_index):
@@ -201,62 +202,106 @@ def get_next_token(input):
             return token
 
 
-file = open("input.txt", "r")
-token_file = open("tokens.txt", "a")
-symbol_file = open("symbol_table.txt", "a")
-lexical_error_file = open("lexical_errors.txt", "a")
+# file = open("input.txt", "r")
+# token_file = open("tokens.txt", "a")
+# symbol_file = open("symbol_table.txt", "a")
+# lexical_error_file = open("lexical_errors.txt", "a")
 complete_dfa = dfa("", 0)
 symbols = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<', '/'}
-total_errors = []
+# total_errors = []
 keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
 keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
-current_index = 0
-lexical_error = False
-counter = 1
-comment_string = ""
-line_counter = None
-for line in file:
-    tokens_in_a_line = []
-    errors_in_a_line = []
-    while current_index != len(line):
-        result = get_next_token(line)
-        if result != None:
-            tokens_in_a_line.append(result)
-            print(f"lexeme is :{result.lexeme}")
-    if len(tokens_in_a_line) != 0:
-        token_file.write(f"{counter}.\t")
-        for token in tokens_in_a_line:
-            token_file.write(f"({token.type}, {token.lexeme}) ")
-        token_file.write("\n")
-    if len(errors_in_a_line) != 0:
-        if not lexical_error:
-            lexical_error = True
-        lexical_error_file.write(f"{counter}.\t")
-        for error in errors_in_a_line:
-            lexical_error_file.write(f"({error.lexeme}, {error.text}) ")
-        lexical_error_file.write("\n")
-    if (line_counter == None and complete_dfa.type == "comment"):
-        line_counter = counter
-    counter += 1
-    current_index = 0
-
-if complete_dfa.type == "comment":
-    error = Error(constant.UNCLOSED_COMMENT, comment_string[:7] + "...")
-    lexical_error_file.write(f"{line_counter}.\t({error.lexeme}, {error.text}) ")
-    lexical_error_file.write("\n")
-    total_errors.append(error)
-if not lexical_error:
-    lexical_error_file.write("There is no lexical error.")
-
-counter = 1
-for symbol in keywords_and_identifiers:
-    symbol_file.write(f"{counter}.\t{symbol}")
-    symbol_file.write("\n")
-    counter += 1
+# current_index = 0
+# lexical_error = False
+# counter = 1
+# comment_string = ""
+# line_counter = None
+# for line in file:
+#     tokens_in_a_line = []
+#     errors_in_a_line = []
+#     while current_index != len(line):
+#         result = get_next_token(line)
+#         if result != None:
+#             tokens_in_a_line.append(result)
+#             print(f"lexeme is :{result.lexeme}")
+#     if len(tokens_in_a_line) != 0:
+#         token_file.write(f"{counter}.\t")
+#         for token in tokens_in_a_line:
+#             token_file.write(f"({token.type}, {token.lexeme}) ")
+#         token_file.write("\n")
+#     if len(errors_in_a_line) != 0:
+#         if not lexical_error:
+#             lexical_error = True
+#         lexical_error_file.write(f"{counter}.\t")
+#         for error in errors_in_a_line:
+#             lexical_error_file.write(f"({error.lexeme}, {error.text}) ")
+#         lexical_error_file.write("\n")
+#     if (line_counter == None and complete_dfa.type == "comment"):
+#         line_counter = counter
+#     counter += 1
+#     current_index = 0
+#
+# if complete_dfa.type == "comment":
+#     error = Error(constant.UNCLOSED_COMMENT, comment_string[:7] + "...")
+#     lexical_error_file.write(f"{line_counter}.\t({error.lexeme}, {error.text}) ")
+#     lexical_error_file.write("\n")
+#     total_errors.append(error)
+# if not lexical_error:
+#     lexical_error_file.write("There is no lexical error.")
+#
+# counter = 1
+# for symbol in keywords_and_identifiers:
+#     symbol_file.write(f"{counter}.\t{symbol}")
+#     symbol_file.write("\n")
+#     counter += 1
 
 
 
 # parser code
+f = open('data.json')
+data = json.load(f)
+terminals = data['terminals']
+non_terminals = data['non-terminal']
+first_dict = data['first']
+follow_dict = data['follow']
+parse_table = {}
+rule_file = open('rules.txt')
+lines = rule_file.readlines()
+rules = {}
+for line in lines:
+    line = line.strip()
+    rule = line.split('->')
+    rules[rule[0]] = rule[1]
+parse_table = {}
+for non_terminal, productions in rules.items():
+    non_terminal = non_terminal.strip()
+    productions = productions.strip()
+
+    for production in productions.split('|'):
+        production = production.strip()
+        symbols = production.split(' ')
+        if symbols[0] in terminals:
+            parse_table[(non_terminal, symbols[0])] = production
+        else:
+            if symbols[0] == "EPSILON":
+                for terminal in follow_dict[non_terminal]:
+                    parse_table[(non_terminal, terminal)] = "EPSILON"
+            else:
+                for terminal in first_dict[symbols[0]]:
+                    if terminal != "EPSILON":
+                        parse_table[(non_terminal, terminal)] = production
+                if "EPSILON" in first_dict[symbols[0]]:
+                    moves_to_epsilon = True
+                    for symbol in symbols:
+                        if symbol in terminals or "EPSILON" not in first_dict[symbols[0]]:
+                            moves_to_epsilon = False
+                            break
+                    if moves_to_epsilon:
+                        for terminal in follow_dict[non_terminal]:
+                            parse_table[(non_terminal, terminal)] = production
+
+
+
 
 
 
