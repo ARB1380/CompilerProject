@@ -33,7 +33,9 @@ def reset_dfa():
 
 
 def is_symbol(character):
-    return character in symbols
+    if character in symbols_x:
+        return True
+    return False
 
 
 def is_slash(character):
@@ -84,6 +86,7 @@ def get_next_token(input):
     global current_index, comment_string, line_counter
     start_index = current_index
     while current_index != len(input):
+        temp = input[current_index]
         if is_digit(input[current_index]):
             if is_in_initial_state():
                 start("number")
@@ -181,7 +184,7 @@ def get_next_token(input):
             if is_in_special_state(1, "identifier"):
                 token = get_token("ID", get_lexeme(input, start_index, copy_current_index))
                 return token
-            return None
+            start_index = current_index
         elif input[current_index] == '\t':
             current_index += 1
             start_index = current_index;
@@ -193,28 +196,30 @@ def get_next_token(input):
             current_index += 1
             start_index = current_index
     # these codes ore for handling last line in a file
-    if current_index - 1 != '\n':
-        if is_in_special_state(1, "number"):
-            token = get_token("NUM", get_lexeme(input, start_index, current_index))
-            return token
-        if is_in_special_state(1, "identifier"):
-            token = get_token("ID", get_lexeme(input, start_index, current_index))
-            return token
+    # if current_index - 1 != '\n':
+    #     if is_in_special_state(1, "number"):
+    #         token = get_token("NUM", get_lexeme(input, start_index, current_index))
+    #         return token
+    #     if is_in_special_state(1, "identifier"):
+    #         token = get_token("ID", get_lexeme(input, start_index, current_index))
+    #         return token
 
 
-# file = open("input.txt", "r")
+file = open("input.txt", "r")
+input1 = file.read()
 # token_file = open("tokens.txt", "a")
 # symbol_file = open("symbol_table.txt", "a")
 # lexical_error_file = open("lexical_errors.txt", "a")
 complete_dfa = dfa("", 0)
-symbols = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<', '/'}
+symbols_x = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<', '/'}
+
 # total_errors = []
 keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
 keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
-# current_index = 0
+current_index = 0
 # lexical_error = False
 # counter = 1
-# comment_string = ""
+comment_string = ""
 # line_counter = None
 # for line in file:
 #     tokens_in_a_line = []
@@ -275,6 +280,8 @@ for line in lines:
 parse_table = {}
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
+    if non_terminal == 'Additive-expression-prime':
+        i = 2
     productions = productions.strip()
 
     for production in productions.split('|'):
@@ -299,6 +306,42 @@ for non_terminal, productions in rules.items():
                     if moves_to_epsilon:
                         for terminal in follow_dict[non_terminal]:
                             parse_table[(non_terminal, terminal)] = production
+stack = []
+start_node = Node("Program")
+end_node = Node("$", parent=start_node)
+stack.append(end_node)
+stack.append(start_node)
+token = get_next_token(input1)
+while len(stack) != 0:
+    node = stack[len(stack) - 1]
+    if node.name in non_terminals:
+        action = ""
+        if token.type == "NUM" or token.type == "ID":
+            action = parse_table[(node.name, token.type)]
+        else:
+            action = parse_table[(node.name, token.lexeme)]
+        action = action.split(' ')
+        removed_node = stack.pop()
+        for i in range(len(action)):
+            if action[len(action) -1 - i] != "EPSILON":
+                stack.append(Node(action[len(action) - 1 - i], parent=removed_node))
+            else:
+                epsilon_node = Node("epsilon", parent=removed_node)
+
+    elif node.name in terminals:
+        removed_token = stack.pop()
+        removed_token.name = token
+        print(f'removed token is :{removed_token.name.lexeme}')
+        token = get_next_token(input1)
+    else:
+        stack.pop()
+
+for pre, fill, node in RenderTree(start_node):
+    print("%s%s" % (pre, node.name))
+
+
+
+
 
 
 
@@ -394,5 +437,3 @@ for non_terminal, productions in rules.items():
 # nodes.append(start_node)
 # nodes_value.append("type")
 # Type()
-# for pre, fill, node in RenderTree(start_node):
-#     print("%s%s" % (pre, node.name))
