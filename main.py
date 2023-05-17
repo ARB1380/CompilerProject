@@ -70,7 +70,7 @@ def get_token(type, lexeme):
 
 def append_error(text, lexeme):
     reset_dfa()
-    #errors_in_a_line.append(Error(text, lexeme))
+    # errors_in_a_line.append(Error(text, lexeme))
 
 
 def get_lexeme(input, start_index, end_index):
@@ -195,7 +195,7 @@ def get_next_token(input):
             append_error("Invalid input", get_lexeme(input, start_index, current_index + 1))
             current_index += 1
             start_index = current_index
-    return get_token("X","$")
+    return get_token("X", "$")
 
 
 file = open("input.txt", "r")
@@ -254,7 +254,6 @@ comment_string = ""
 #     counter += 1
 
 
-
 # parser code
 f = open('data.json')
 data = json.load(f)
@@ -270,7 +269,7 @@ for line in lines:
     line = line.strip()
     rule = line.split('->')
     rules[rule[0]] = rule[1]
-#parse table code
+# parse table code
 parse_table = {}
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
@@ -292,7 +291,7 @@ for non_terminal, productions in rules.items():
                 if "EPSILON" in first_dict[symbols[0]]:
                     for i in range(1, len(symbols)):
                         for terminal in first_dict[symbols[i]]:
-                            if terminal != 'EPSILON' and (non_terminal,terminal) not in parse_table:
+                            if terminal != 'EPSILON' and (non_terminal, terminal) not in parse_table:
                                 parse_table[(non_terminal, terminal)] = production
                         if "EPSILON" not in symbols[i]:
                             break
@@ -305,7 +304,16 @@ for non_terminal, productions in rules.items():
                     if moves_to_epsilon:
                         for terminal in follow_dict[non_terminal]:
                             parse_table[(non_terminal, terminal)] = production
-#parse tree code
+synch = []
+for i in first_dict:
+    if 'EPSILON' not in first_dict.get(i):
+        synch.append(i)
+        for j in follow_dict.get(i):
+            if (i, j) not in parse_table:
+                parse_table[(i, j)] = 'SYNCH'
+
+print(synch)
+# parse tree code
 stack = []
 start_node = Node("Program")
 end_node = Node("$")
@@ -315,8 +323,20 @@ stack.reverse()
 token = get_next_token(input1)
 while len(stack) != 0:
     node = stack[len(stack) - 1]
+    if token.lexeme == "return":
+        print("hiiii")
     if node.name in non_terminals:
         action = ""
+        if (token.lexeme == '$'):
+            break
+        if ((node.name, token.lexeme) not in parse_table):
+            print("misplace")
+            token = get_next_token(input1)
+            continue
+        if parse_table[(node.name, token.lexeme)] == "SYNCH":
+            print("Missing Term")
+            stack.pop()
+            continue
         if token.type == "NUM" or token.type == "ID":
             action = parse_table[(node.name, token.type)]
         else:
@@ -334,13 +354,20 @@ while len(stack) != 0:
 
     elif node.name in terminals:
         removed_token = stack.pop()
+        if (token.type == 'NUM' or token.type == "ID"):
+            if (removed_token.name != token.type):
+                print("unexpected")
+                continue
+        elif (removed_token.name != token.lexeme):
+            print("unexpected")
+            continue
         removed_token.name = f'({token.type}, {token.lexeme})'
         token = get_next_token(input1)
     else:
         stack.pop()
-
+for i in stack:
+    i.parent = None
 end_node.parent = start_node
-
 
 file = open("parse_tree.txt", "w", encoding="utf-8")
 result = ""
@@ -349,16 +376,6 @@ for pre, _, node in RenderTree(start_node):
 result = result[:-1]
 file.write(result)
 file.close()
-
-
-
-
-
-
-
-
-
-
 
 # first_set = {
 #     'Type': ['id', 'array', 'integer', 'char', 'num'],
