@@ -315,8 +315,9 @@ for non_terminal, productions in rules.items():
 stack = []
 start_node = Node("Program")
 end_node = Node("$")
-stack.append(end_node)
 stack.append(start_node)
+stack.append(end_node)
+stack.reverse()
 token = get_next_token(input1)
 while len(stack) != 0:
     node = stack[len(stack) - 1]
@@ -328,11 +329,14 @@ while len(stack) != 0:
             action = parse_table[(node.name, token.lexeme)]
         action = action.split(' ')
         removed_node = stack.pop()
+        nodes_to_add = []
         for i in range(len(action)):
-            if action[len(action) -1 - i] != "EPSILON":
-                stack.append(Node(action[len(action) - 1 - i], parent=removed_node))
+            if action[i] != "EPSILON":
+                nodes_to_add.append(Node(action[i], parent=removed_node))
             else:
                 epsilon_node = Node("epsilon", parent=removed_node)
+        for i in range(len(nodes_to_add)):
+            stack.append(nodes_to_add[len(nodes_to_add) - 1 - i])
 
     elif node.name in terminals:
         removed_token = stack.pop()
