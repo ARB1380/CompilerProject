@@ -195,6 +195,7 @@ def get_next_token(input):
             append_error("Invalid input", get_lexeme(input, start_index, current_index + 1))
             current_index += 1
             start_index = current_index
+    return get_token("X","$")
     # these codes ore for handling last line in a file
     # if current_index - 1 != '\n':
     #     if is_in_special_state(1, "number"):
@@ -313,7 +314,7 @@ for non_terminal, productions in rules.items():
                             parse_table[(non_terminal, terminal)] = production
 stack = []
 start_node = Node("Program")
-end_node = Node("$", parent=start_node)
+end_node = Node("$")
 stack.append(end_node)
 stack.append(start_node)
 token = get_next_token(input1)
@@ -335,12 +336,12 @@ while len(stack) != 0:
 
     elif node.name in terminals:
         removed_token = stack.pop()
-        removed_token.name = token
-        print(f'removed token is :{removed_token.name.lexeme}')
+        removed_token.name = f'({token.type}, {token.lexeme})'
+        #print(f'removed token is :{removed_token.name.lexeme}')
         token = get_next_token(input1)
     else:
         stack.pop()
-
+end_node.parent = start_node
 for pre, fill, node in RenderTree(start_node):
     print("%s%s" % (pre, node.name))
 
