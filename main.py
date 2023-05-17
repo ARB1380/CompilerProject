@@ -280,8 +280,6 @@ for line in lines:
 parse_table = {}
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
-    if non_terminal == 'Additive-expression-prime':
-        i = 2
     productions = productions.strip()
 
     for production in productions.split('|'):
@@ -298,6 +296,13 @@ for non_terminal, productions in rules.items():
                     if terminal != "EPSILON":
                         parse_table[(non_terminal, terminal)] = production
                 if "EPSILON" in first_dict[symbols[0]]:
+                    for i in range(1, len(symbols)):
+                        for terminal in first_dict[symbols[i]]:
+                            if terminal != 'EPSILON' and (non_terminal,terminal) not in parse_table:
+                                parse_table[(non_terminal, terminal)] = production
+                        if "EPSILON" not in symbols[i]:
+                            break
+
                     moves_to_epsilon = True
                     for symbol in symbols:
                         if symbol in terminals or "EPSILON" not in first_dict[symbols[0]]:
