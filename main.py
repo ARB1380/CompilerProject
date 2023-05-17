@@ -339,11 +339,15 @@ while len(stack) != 0:
     else:
         stack.pop()
 
-
 end_node.parent = start_node
+
+
 file = open("parse_tree.txt", "w", encoding="utf-8")
+result = ""
 for pre, _, node in RenderTree(start_node):
-    file.write(("%s%s" % (pre, node.name)) + "\n")
+    result += ("%s%s" % (pre, node.name)) + "\n"
+result = result[:-1]
+file.write(result)
 file.close()
 
 
