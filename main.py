@@ -12,15 +12,15 @@ from Token import Token
 
 def is_digit(character):
     return (character == '0' or
-    character == '1' or
-    character == '2' or
-    character == '3' or
-    character == '4' or
-    character == '5' or
-    character == '6' or
-    character == '7' or
-    character == '8' or
-    character == '9')
+            character == '1' or
+            character == '2' or
+            character == '3' or
+            character == '4' or
+            character == '5' or
+            character == '6' or
+            character == '7' or
+            character == '8' or
+            character == '9')
 
 
 def is_letter(character):
@@ -93,8 +93,9 @@ def is_invalid_character(character):
 
 
 def get_next_token(input):
-    global current_index, comment_string, line_counter
+    global current_index, comment_string, line_counter, next_line
     start_index = current_index
+    line_counter = next_line
     while current_index != len(input):
         temp = input[current_index]
         if is_digit(input[current_index]):
@@ -127,7 +128,6 @@ def get_next_token(input):
                         reset_dfa()
                         start_index = current_index
                         comment_string = ""
-                        line_counter = None
                     elif input[current_index] == " " or input[current_index] == "\n":
                         append_error("Invalid input", "/")
                         start_index = current_index
@@ -170,7 +170,6 @@ def get_next_token(input):
             elif is_in_special_state(3, "comment") and is_slash(input[current_index]):
                 reset_dfa()
                 comment_string = ""
-                line_counter = None
                 current_index += 1
                 start_index = current_index
             else:
@@ -187,6 +186,11 @@ def get_next_token(input):
             start_index = current_index
         elif input[current_index] == '\n':
             copy_current_index = current_index
+            if (current_index == start_index):
+                line_counter += 1
+                next_line += 1
+            else:
+                next_line += 1
             current_index += 1
             if is_in_special_state(1, "number"):
                 token = get_token("NUM", get_lexeme(input, start_index, copy_current_index))
@@ -210,6 +214,8 @@ def get_next_token(input):
 
 file = open("input.txt", "r")
 input1 = file.read()
+line_counter = 1
+next_line = 1
 # token_file = open("tokens.txt", "a")
 # symbol_file = open("symbol_table.txt", "a")
 # lexical_error_file = open("lexical_errors.txt", "a")
@@ -280,7 +286,6 @@ for line in lines:
     rule = line.split('->')
     rules[rule[0]] = rule[1]
 
-
 # parse table code
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
@@ -317,14 +322,13 @@ for non_terminal, productions in rules.items():
                     if moves_to_epsilon:
                         for terminal in follow_dict[non_terminal]:
                             parse_table[(non_terminal, terminal)] = production
-synch = []
 for i in non_terminals:
     for j in follow_dict.get(i):
         if (i, j) not in parse_table:
             parse_table[(i, j)] = 'SYNCH'
 
-#print(synch)
 # parse tree code
+error_text = []
 stack = []
 start_node = Node("Program")
 end_node = Node("$")
@@ -334,17 +338,15 @@ stack.reverse()
 token = get_next_token(input1)
 while len(stack) != 0:
     node = stack[len(stack) - 1]
-    # if token.lexeme == "return":
-    #     print("hiiii")
     if node.name in non_terminals:
         action = ""
         if (token.type == "ID" or token.type == "NUM"):
             if (node.name, token.type) not in parse_table:
-                print("illegal")
+                error_text.append(f"#{line_counter} : syntax error, illegal {token.type}")
                 token = get_next_token(input1)
                 continue
             if parse_table[(node.name, token.type)] == "SYNCH":
-                #print("Missing Term")
+                error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
                 removed_token = stack.pop()
                 removed_token.parent = None
                 continue
@@ -352,13 +354,14 @@ while len(stack) != 0:
 
         else:
             if (node.name, token.lexeme) not in parse_table:
-                if token.lexeme == '$':
+                if token.lexeme == '$' and node.name != '$':
+                    error_text.append(f"#{line_counter} : syntax error, Unexpected EOF")
                     break
-                #print("illegal")
+                error_text.append(f"#{line_counter} : syntax error, illegal {token.lexeme}")
                 token = get_next_token(input1)
                 continue
             if parse_table[(node.name, token.lexeme)] == "SYNCH":
-                #print("Missing Term")
+                error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
                 removed_token = stack.pop()
                 removed_token.parent = None
                 continue
@@ -379,11 +382,11 @@ while len(stack) != 0:
         if (removed_token.name == 'NUM' or removed_token.name == "ID"):
             if (removed_token.name != token.type):
                 removed_token.parent = None
-                #print("missing")
+                error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
                 continue
         elif (removed_token.name != token.lexeme):
             removed_token.parent = None
-            #print("unexpected")
+            error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
             continue
         removed_token.name = f'({token.type}, {token.lexeme})'
         token = get_next_token(input1)
@@ -394,7 +397,6 @@ end_node.parent = start_node
 for i in stack:
     i.parent = None
 
-
 file = open("parse_tree.txt", "w", encoding="utf-8")
 result = ""
 for pre, _, node in RenderTree(start_node):
@@ -403,10 +405,15 @@ result = result[:-1]
 file.write(result)
 file.close()
 
-file = open("syntax_errors.txt","w")
-file.write("There is no syntax error.")
-
-
+file = open("syntax_errors.txt", "w")
+if len(error_text) == 0:
+    file.write("There is no syntax error.")
+else:
+    for i in range(len(error_text)):
+        if (i == len(error_text) - 1):
+            file.write(f"{error_text[i]}")
+        else:
+            file.write(f"{error_text[i]} \n")
 # first_set = {
 #     'Type': ['id', 'array', 'integer', 'char', 'num'],
 #     'Simple': ['integer', 'char', 'num']
