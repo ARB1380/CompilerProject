@@ -1,22 +1,32 @@
 # Mohammad Mahdi Mirzaei 99171022
 # Alireza Farshi 99101976
 
-import re
+import string
 import json
 from anytree import Node, RenderTree
 
 import constant
 from dfa import dfa
 from Token import Token
-from Error import Error
 
 
 def is_digit(character):
-    return re.match("[0-9]", character)
+    return (character == '0' or
+    character == '1' or
+    character == '2' or
+    character == '3' or
+    character == '4' or
+    character == '5' or
+    character == '6' or
+    character == '7' or
+    character == '8' or
+    character == '9')
 
 
 def is_letter(character):
-    return re.match("[a-zA-Z]", character)
+    small_alphabet = list(string.ascii_lowercase)
+    big_alphabet = list(string.ascii_uppercase)
+    return character in small_alphabet or character in big_alphabet
 
 
 def is_in_special_state(state, type):
@@ -305,12 +315,10 @@ for non_terminal, productions in rules.items():
                         for terminal in follow_dict[non_terminal]:
                             parse_table[(non_terminal, terminal)] = production
 synch = []
-for i in first_dict:
-    if 'EPSILON' not in first_dict.get(i):
-        synch.append(i)
-        for j in follow_dict.get(i):
-            if (i, j) not in parse_table:
-                parse_table[(i, j)] = 'SYNCH'
+for i in non_terminals:
+    for j in follow_dict.get(i):
+        if (i, j) not in parse_table:
+            parse_table[(i, j)] = 'SYNCH'
 
 print(synch)
 # parse tree code
@@ -323,23 +331,32 @@ stack.reverse()
 token = get_next_token(input1)
 while len(stack) != 0:
     node = stack[len(stack) - 1]
-    if token.lexeme == "return":
-        print("hiiii")
+    # if token.lexeme == "return":
+    #     print("hiiii")
     if node.name in non_terminals:
         action = ""
-        if (token.lexeme == '$'):
-            break
-        if ((node.name, token.lexeme) not in parse_table):
-            print("misplace")
-            token = get_next_token(input1)
-            continue
-        if parse_table[(node.name, token.lexeme)] == "SYNCH":
-            print("Missing Term")
-            stack.pop()
-            continue
-        if token.type == "NUM" or token.type == "ID":
+        if (token.type == "ID" or token.type == "NUM"):
+            if (node.name, token.type) not in parse_table:
+                print("illegal")
+                token = get_next_token(input1)
+                continue
+            if parse_table[(node.name, token.type)] == "SYNCH":
+                print("Missing Term")
+                removed_token = stack.pop()
+                removed_token.parent = None
+                continue
             action = parse_table[(node.name, token.type)]
+
         else:
+            if (node.name, token.lexeme) not in parse_table:
+                print("illegal")
+                token = get_next_token(input1)
+                continue
+            if parse_table[(node.name, token.lexeme)] == "SYNCH":
+                print("Missing Term")
+                removed_token = stack.pop()
+                removed_token.parent = None
+                continue
             action = parse_table[(node.name, token.lexeme)]
         action = action.split(' ')
         removed_node = stack.pop()
@@ -356,18 +373,22 @@ while len(stack) != 0:
         removed_token = stack.pop()
         if (token.type == 'NUM' or token.type == "ID"):
             if (removed_token.name != token.type):
-                print("unexpected")
+                removed_token.parent = None
+                print("missing")
                 continue
         elif (removed_token.name != token.lexeme):
+            removed_token.parent = None
             print("unexpected")
             continue
         removed_token.name = f'({token.type}, {token.lexeme})'
         token = get_next_token(input1)
+
     else:
         stack.pop()
+end_node.parent = start_node
 for i in stack:
     i.parent = None
-end_node.parent = start_node
+
 
 file = open("parse_tree.txt", "w", encoding="utf-8")
 result = ""
@@ -377,6 +398,8 @@ result = result[:-1]
 file.write(result)
 file.close()
 
+file = open("syntax_errors.txt","w")
+file.write("There is no syntax error.")
 # first_set = {
 #     'Type': ['id', 'array', 'integer', 'char', 'num'],
 #     'Simple': ['integer', 'char', 'num']
