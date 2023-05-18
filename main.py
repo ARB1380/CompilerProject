@@ -2,8 +2,9 @@
 # Alireza Farshi 99101976
 
 import string
-import json
 from anytree import Node, RenderTree
+import time
+import json
 
 import constant
 from dfa import dfa
@@ -207,7 +208,7 @@ def get_next_token(input):
             start_index = current_index
     return get_token("X", "$")
 
-
+time1 = time.time()
 file = open("input.txt", "r")
 input1 = file.read()
 # token_file = open("tokens.txt", "a")
@@ -279,8 +280,9 @@ for line in lines:
     line = line.strip()
     rule = line.split('->')
     rules[rule[0]] = rule[1]
+
+
 # parse table code
-parse_table = {}
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
     productions = productions.strip()
@@ -300,10 +302,12 @@ for non_terminal, productions in rules.items():
                         parse_table[(non_terminal, terminal)] = production
                 if "EPSILON" in first_dict[symbols[0]]:
                     for i in range(1, len(symbols)):
+                        if non_terminal == 'H':
+                            w = 0
                         for terminal in first_dict[symbols[i]]:
                             if terminal != 'EPSILON' and (non_terminal, terminal) not in parse_table:
                                 parse_table[(non_terminal, terminal)] = production
-                        if "EPSILON" not in symbols[i]:
+                        if "EPSILON" not in first_dict[symbols[i]]:
                             break
 
                     moves_to_epsilon = True
@@ -320,7 +324,7 @@ for i in non_terminals:
         if (i, j) not in parse_table:
             parse_table[(i, j)] = 'SYNCH'
 
-print(synch)
+#print(synch)
 # parse tree code
 stack = []
 start_node = Node("Program")
@@ -341,7 +345,7 @@ while len(stack) != 0:
                 token = get_next_token(input1)
                 continue
             if parse_table[(node.name, token.type)] == "SYNCH":
-                print("Missing Term")
+                #print("Missing Term")
                 removed_token = stack.pop()
                 removed_token.parent = None
                 continue
@@ -349,11 +353,13 @@ while len(stack) != 0:
 
         else:
             if (node.name, token.lexeme) not in parse_table:
-                print("illegal")
+                if token.lexeme == '$':
+                    break
+                #print("illegal")
                 token = get_next_token(input1)
                 continue
             if parse_table[(node.name, token.lexeme)] == "SYNCH":
-                print("Missing Term")
+                #print("Missing Term")
                 removed_token = stack.pop()
                 removed_token.parent = None
                 continue
@@ -371,14 +377,14 @@ while len(stack) != 0:
 
     elif node.name in terminals:
         removed_token = stack.pop()
-        if (token.type == 'NUM' or token.type == "ID"):
+        if (removed_token.name == 'NUM' or removed_token.name == "ID"):
             if (removed_token.name != token.type):
                 removed_token.parent = None
-                print("missing")
+                #print("missing")
                 continue
         elif (removed_token.name != token.lexeme):
             removed_token.parent = None
-            print("unexpected")
+            #print("unexpected")
             continue
         removed_token.name = f'({token.type}, {token.lexeme})'
         token = get_next_token(input1)
@@ -400,6 +406,9 @@ file.close()
 
 file = open("syntax_errors.txt","w")
 file.write("There is no syntax error.")
+time2 = time.time()
+print(time2 - time1)
+
 # first_set = {
 #     'Type': ['id', 'array', 'integer', 'char', 'num'],
 #     'Simple': ['integer', 'char', 'num']
