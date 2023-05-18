@@ -3,7 +3,6 @@
 
 import string
 from anytree import Node, RenderTree
-import time
 import json
 
 import constant
@@ -208,7 +207,7 @@ def get_next_token(input):
             start_index = current_index
     return get_token("X", "$")
 
-time1 = time.time()
+
 file = open("input.txt", "r")
 input1 = file.read()
 # token_file = open("tokens.txt", "a")
@@ -406,8 +405,7 @@ file.close()
 
 file = open("syntax_errors.txt","w")
 file.write("There is no syntax error.")
-time2 = time.time()
-print(time2 - time1)
+
 
 # first_set = {
 #     'Type': ['id', 'array', 'integer', 'char', 'num'],
