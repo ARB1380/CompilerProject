@@ -97,7 +97,6 @@ def get_next_token(input):
     start_index = current_index
     line_counter = next_line
     while current_index != len(input):
-        temp = input[current_index]
         if is_digit(input[current_index]):
             if is_in_initial_state():
                 start("number")
@@ -286,7 +285,7 @@ for line in lines:
     rule = line.split('->')
     rules[rule[0]] = rule[1]
 
-# parse table code
+
 for non_terminal, productions in rules.items():
     non_terminal = non_terminal.strip()
     productions = productions.strip()
@@ -327,7 +326,7 @@ for i in non_terminals:
         if (i, j) not in parse_table:
             parse_table[(i, j)] = 'SYNCH'
 
-# parse tree code
+
 error_text = []
 stack = []
 start_node = Node("Program")
@@ -414,91 +413,3 @@ else:
             file.write(f"{error_text[i]}")
         else:
             file.write(f"{error_text[i]} \n")
-# first_set = {
-#     'Type': ['id', 'array', 'integer', 'char', 'num'],
-#     'Simple': ['integer', 'char', 'num']
-# }
-#
-# follow_set = {
-#     'Type': ['$'],
-#     'Simple': ['$', ']']
-# }
-# nodes = []
-# nodes_value = []
-#
-#
-# def Type():
-#     if lookahead in first_set['Simple']:
-#         nodes.append(Node("simple", parent= nodes[get_parent("type")]))
-#         nodes_value.append("simple")
-#         Simple()
-#     elif lookahead == 'id':
-#         nodes.append(Node("id", parent=nodes[get_parent("type")]))
-#         nodes_value.append("id")
-#         Match('id')
-#     elif lookahead == 'array':
-#         nodes.append(Node("array", parent= nodes[get_parent("type")]))
-#         nodes_value.append("array")
-#         Match('array')
-#         nodes.append(Node("[", parent=nodes[get_parent("type")]))
-#         nodes_value.append("[")
-#         Match('[')
-#         nodes.append(Node("simple", parent=nodes[get_parent("type")]))
-#         nodes_value.append("simple")
-#         Simple()
-#         nodes.append(Node("]", parent=nodes[get_parent("type")]))
-#         nodes_value.append("]")
-#         Match(']')
-#         nodes.append(Node("of", parent=nodes[get_parent("type")]))
-#         nodes_value.append("of")
-#         Match('of')
-#         nodes.append(Node("type", parent=nodes[get_parent("type")]))
-#         nodes_value.append("type")
-#         Type()
-#
-#
-#
-#
-#
-# def Simple():
-#     if lookahead == 'integer':
-#         nodes.append(Node("integer", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("integer")
-#         Match('integer')
-#     elif lookahead == 'char':
-#         nodes.append(Node("char", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("char")
-#         Match('char')
-#     elif lookahead == 'num':
-#         nodes.append(Node("num", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("num")
-#         Match('num')
-#         nodes.append(Node("dotdot", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("dotdot")
-#         Match('dotdot')
-#         nodes.append(Node("num", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("num")
-#         Match('num')
-#
-# def Match(expected_token):
-#     global lookahead
-#     if lookahead == expected_token:
-#         token = get_next_token(input)
-#         if token != None:
-#             lookahead = token.lexeme
-#
-#
-#
-# def get_parent(value):
-#     for i in range(len(nodes_value) - 1, -1, -1):
-#         if nodes_value[i] == value:
-#             return i
-#         continue
-#
-#
-# input = "array [ num dotdot num ] of integer"
-# lookahead = "array"
-# start_node = Node("type")
-# nodes.append(start_node)
-# nodes_value.append("type")
-# Type()
