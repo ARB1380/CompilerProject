@@ -218,12 +218,14 @@ def start_parse(node):
         node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
         look_ahead = get_next_token(input1)
         return
-    if node.name == "EPSILON":
+    if node.name == "epsilon":
         return
     rule = get_rule(node.name, look_ahead)
     #panic mode to be added
     for action in rule.split(' '):
         new_node = Node(action, parent= node)
+        if action == 'EPSILON':
+            new_node.name = 'epsilon'
         start_parse(new_node)
     return
 
