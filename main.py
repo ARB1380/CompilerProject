@@ -213,25 +213,63 @@ def get_next_token(input):
 
 def start_parse(node):
     global look_ahead
+    global has_eof_error
     print(node.name)
     if node.name in terminals:
-        node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
-        look_ahead = get_next_token(input1)
+        if node.name == 'NUM' or node.name == 'ID':
+            if look_ahead.type != node.name:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+            else:
+                node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                look_ahead = get_next_token(input1)
+        else:
+            if look_ahead.lexeme != node.name:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+            else:
+                node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                look_ahead = get_next_token(input1)
         return
     if node.name == "epsilon":
         return
     rule = get_rule(node.name, look_ahead)
-    #panic mode to be added
+    # panic mode to be added
+    while rule == None:
+        if look_ahead.type == 'NUM' or look_ahead.type == 'ID':
+            if look_ahead.type not in follow_dict[node.name]:
+                errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.type}")
+                look_ahead = get_next_token(input1)
+                rule = get_rule(node.name, look_ahead)
+            else:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+                return
+        else:
+            if look_ahead.lexeme not in follow_dict[node.name]:
+                if look_ahead.lexeme == '$' and node.name != '$':
+                    errors.append(f"#{line_counter} : syntax error, Unexpected EOF")
+                    has_eof_error = True
+                    node.parent = None
+                    return
+                else:
+                    errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.lexeme}")
+                    look_ahead = get_next_token(input1)
+                    rule = get_rule(node.name, look_ahead)
+            else:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+                return
+
     for action in rule.split(' '):
-        new_node = Node(action, parent= node)
+        if look_ahead.lexeme == '$' and has_eof_error:
+            return
+
+        new_node = Node(action, parent=node)
         if action == 'EPSILON':
             new_node.name = 'epsilon'
         start_parse(new_node)
     return
-
-
-
-
 
 
 def get_rule(non_terminal, token):
@@ -244,8 +282,6 @@ def get_rule(non_terminal, token):
             return production
 
     return None
-
-
 
 
 def is_in_first_of_production(token, production):
@@ -265,13 +301,13 @@ def is_in_first_of_production(token, production):
             if "EPSILON" not in first_dict[symbol]:
                 return False
 
+
 def is_in_follow_of_production(token, non_terminal, production):
     if moves_to_epsilon(production):
         if token.type == "ID" or token.type == "NUM":
             return token.type in follow_dict[non_terminal]
         return token.lexeme in follow_dict[non_terminal]
     return False
-
 
 
 def moves_to_epsilon(production):
@@ -284,6 +320,7 @@ def moves_to_epsilon(production):
         if "EPSILON" not in first_dict[symbol]:
             return False
     return True
+
 
 file = open("input.txt", "r")
 input1 = file.read()
@@ -362,12 +399,11 @@ for line in lines:
 start_node = Node('Program')
 look_ahead = ""
 look_ahead = get_next_token(input1)
+errors = []
+has_eof_error = False
 start_parse(start_node)
-end_node = Node("$", parent=start_node)
-
-
-
-
+if not has_eof_error:
+    end_node = Node("$", parent=start_node)
 
 # for non_terminal, productions in rules.items():
 #     non_terminal = non_terminal.strip()
@@ -487,12 +523,12 @@ result = result[:-1]
 file.write(result)
 file.close()
 
-# file = open("syntax_errors.txt", "w")
-# if len(error_text) == 0:
-#     file.write("There is no syntax error.")
-# else:
-#     for i in range(len(error_text)):
-#         if (i == len(error_text) - 1):
-#             file.write(f"{error_text[i]}")
-#         else:
-#             file.write(f"{error_text[i]} \n")
+file = open("syntax_errors.txt", "w")
+if len(errors) == 0:
+    file.write("There is no syntax error.")
+else:
+    for i in range(len(errors)):
+        # if (i == len(errors) - 1):
+        #     file.write(f"{errors[i]}")
+        # else:
+        file.write(f"{errors[i]}\n")
