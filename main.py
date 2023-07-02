@@ -97,7 +97,6 @@ def get_next_token(input):
     start_index = current_index
     line_counter = next_line
     while current_index != len(input):
-        temp = input[current_index]
         if is_digit(input[current_index]):
             if is_in_initial_state():
                 start("number")
@@ -212,6 +211,117 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
+def start_parse(node):
+    global look_ahead
+    global has_eof_error
+    print(node.name)
+    if node.name in terminals:
+        if node.name == 'NUM' or node.name == 'ID':
+            if look_ahead.type != node.name:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+            else:
+                node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                look_ahead = get_next_token(input1)
+        else:
+            if look_ahead.lexeme != node.name:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+            else:
+                node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                look_ahead = get_next_token(input1)
+        return
+    if node.name == "epsilon":
+        return
+    rule = get_rule(node.name, look_ahead)
+    # panic mode to be added
+    while rule == None:
+        if look_ahead.type == 'NUM' or look_ahead.type == 'ID':
+            if look_ahead.type not in follow_dict[node.name]:
+                errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.type}")
+                look_ahead = get_next_token(input1)
+                rule = get_rule(node.name, look_ahead)
+            else:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+                return
+        else:
+            if look_ahead.lexeme not in follow_dict[node.name]:
+                if look_ahead.lexeme == '$' and node.name != '$':
+                    errors.append(f"#{line_counter} : syntax error, Unexpected EOF")
+                    has_eof_error = True
+                    node.parent = None
+                    return
+                else:
+                    errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.lexeme}")
+                    look_ahead = get_next_token(input1)
+                    rule = get_rule(node.name, look_ahead)
+            else:
+                errors.append(f"#{line_counter} : syntax error, missing {node.name}")
+                node.parent = None
+                return
+
+    for action in rule.split(' '):
+        if look_ahead.lexeme == '$' and has_eof_error:
+            return
+
+        new_node = Node(action, parent=node)
+        if action == 'EPSILON':
+            new_node.name = 'epsilon'
+        start_parse(new_node)
+    return
+
+
+def get_rule(non_terminal, token):
+    productions = rules[non_terminal]
+    for production in productions.split('|'):
+        production = production.strip()
+        if production != "EPSILON" and is_in_first_of_production(token, production):
+            return production
+        if is_in_follow_of_production(token, non_terminal, production):
+            return production
+
+    return None
+
+
+def is_in_first_of_production(token, production):
+    symbols = production.split(' ')
+    for symbol in symbols:
+        if symbol in terminals:
+            if token.type == "ID" or token.type == "NUM":
+                return symbol == token.type
+            return symbol == token.lexeme
+
+        else:
+            if token.type == "ID" or token.type == "NUM":
+                if token.type in first_dict[symbol]:
+                    return True
+            if token.lexeme in first_dict[symbol]:
+                return True
+            if "EPSILON" not in first_dict[symbol]:
+                return False
+
+
+def is_in_follow_of_production(token, non_terminal, production):
+    if moves_to_epsilon(production):
+        if token.type == "ID" or token.type == "NUM":
+            return token.type in follow_dict[non_terminal]
+        return token.lexeme in follow_dict[non_terminal]
+    return False
+
+
+def moves_to_epsilon(production):
+    if production == "EPSILON":
+        return True
+    symbols = production.split(' ')
+    for symbol in symbols:
+        if symbol in terminals:
+            return False
+        if "EPSILON" not in first_dict[symbol]:
+            return False
+    return True
+
+
 file = open("input.txt", "r")
 input1 = file.read()
 line_counter = 1
@@ -284,118 +394,126 @@ rules = {}
 for line in lines:
     line = line.strip()
     rule = line.split('->')
-    rules[rule[0]] = rule[1]
+    rules[rule[0].strip()] = rule[1].strip()
 
-# parse table code
-for non_terminal, productions in rules.items():
-    non_terminal = non_terminal.strip()
-    productions = productions.strip()
+start_node = Node('Program')
+look_ahead = ""
+look_ahead = get_next_token(input1)
+errors = []
+has_eof_error = False
+start_parse(start_node)
+if not has_eof_error:
+    end_node = Node("$", parent=start_node)
 
-    for production in productions.split('|'):
-        production = production.strip()
-        symbols = production.split(' ')
-        if symbols[0] in terminals:
-            parse_table[(non_terminal, symbols[0])] = production
-        else:
-            if symbols[0] == "EPSILON":
-                for terminal in follow_dict[non_terminal]:
-                    parse_table[(non_terminal, terminal)] = "EPSILON"
-            else:
-                for terminal in first_dict[symbols[0]]:
-                    if terminal != "EPSILON":
-                        parse_table[(non_terminal, terminal)] = production
-                if "EPSILON" in first_dict[symbols[0]]:
-                    for i in range(1, len(symbols)):
-                        if non_terminal == 'H':
-                            w = 0
-                        for terminal in first_dict[symbols[i]]:
-                            if terminal != 'EPSILON' and (non_terminal, terminal) not in parse_table:
-                                parse_table[(non_terminal, terminal)] = production
-                        if "EPSILON" not in first_dict[symbols[i]]:
-                            break
-
-                    moves_to_epsilon = True
-                    for symbol in symbols:
-                        if symbol in terminals or "EPSILON" not in first_dict[symbols[0]]:
-                            moves_to_epsilon = False
-                            break
-                    if moves_to_epsilon:
-                        for terminal in follow_dict[non_terminal]:
-                            parse_table[(non_terminal, terminal)] = production
-for i in non_terminals:
-    for j in follow_dict.get(i):
-        if (i, j) not in parse_table:
-            parse_table[(i, j)] = 'SYNCH'
-
-# parse tree code
-error_text = []
-stack = []
-start_node = Node("Program")
-end_node = Node("$")
-stack.append(start_node)
-stack.append(end_node)
-stack.reverse()
-token = get_next_token(input1)
-while len(stack) != 0:
-    node = stack[len(stack) - 1]
-    if node.name in non_terminals:
-        action = ""
-        if (token.type == "ID" or token.type == "NUM"):
-            if (node.name, token.type) not in parse_table:
-                error_text.append(f"#{line_counter} : syntax error, illegal {token.type}")
-                token = get_next_token(input1)
-                continue
-            if parse_table[(node.name, token.type)] == "SYNCH":
-                error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
-                removed_token = stack.pop()
-                removed_token.parent = None
-                continue
-            action = parse_table[(node.name, token.type)]
-
-        else:
-            if (node.name, token.lexeme) not in parse_table:
-                if token.lexeme == '$' and node.name != '$':
-                    error_text.append(f"#{line_counter} : syntax error, Unexpected EOF")
-                    break
-                error_text.append(f"#{line_counter} : syntax error, illegal {token.lexeme}")
-                token = get_next_token(input1)
-                continue
-            if parse_table[(node.name, token.lexeme)] == "SYNCH":
-                error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
-                removed_token = stack.pop()
-                removed_token.parent = None
-                continue
-            action = parse_table[(node.name, token.lexeme)]
-        action = action.split(' ')
-        removed_node = stack.pop()
-        nodes_to_add = []
-        for i in range(len(action)):
-            if action[i] != "EPSILON":
-                nodes_to_add.append(Node(action[i], parent=removed_node))
-            else:
-                epsilon_node = Node("epsilon", parent=removed_node)
-        for i in range(len(nodes_to_add)):
-            stack.append(nodes_to_add[len(nodes_to_add) - 1 - i])
-
-    elif node.name in terminals:
-        removed_token = stack.pop()
-        if (removed_token.name == 'NUM' or removed_token.name == "ID"):
-            if (removed_token.name != token.type):
-                removed_token.parent = None
-                error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
-                continue
-        elif (removed_token.name != token.lexeme):
-            removed_token.parent = None
-            error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
-            continue
-        removed_token.name = f'({token.type}, {token.lexeme})'
-        token = get_next_token(input1)
-
-    else:
-        stack.pop()
-end_node.parent = start_node
-for i in stack:
-    i.parent = None
+# for non_terminal, productions in rules.items():
+#     non_terminal = non_terminal.strip()
+#     productions = productions.strip()
+#
+#     for production in productions.split('|'):
+#         production = production.strip()
+#         symbols = production.split(' ')
+#         if symbols[0] in terminals:
+#             parse_table[(non_terminal, symbols[0])] = production
+#         else:
+#             if symbols[0] == "EPSILON":
+#                 for terminal in follow_dict[non_terminal]:
+#                     parse_table[(non_terminal, terminal)] = "EPSILON"
+#             else:
+#                 for terminal in first_dict[symbols[0]]:
+#                     if terminal != "EPSILON":
+#                         parse_table[(non_terminal, terminal)] = production
+#                 if "EPSILON" in first_dict[symbols[0]]:
+#                     for i in range(1, len(symbols)):
+#                         if non_terminal == 'H':
+#                             w = 0
+#                         for terminal in first_dict[symbols[i]]:
+#                             if terminal != 'EPSILON' and (non_terminal, terminal) not in parse_table:
+#                                 parse_table[(non_terminal, terminal)] = production
+#                         if "EPSILON" not in first_dict[symbols[i]]:
+#                             break
+#
+#                     moves_to_epsilon = True
+#                     for symbol in symbols:
+#                         if symbol in terminals or "EPSILON" not in first_dict[symbols[0]]:
+#                             moves_to_epsilon = False
+#                             break
+#                     if moves_to_epsilon:
+#                         for terminal in follow_dict[non_terminal]:
+#                             parse_table[(non_terminal, terminal)] = production
+# for i in non_terminals:
+#     for j in follow_dict.get(i):
+#         if (i, j) not in parse_table:
+#             parse_table[(i, j)] = 'SYNCH'
+#
+#
+# error_text = []
+# stack = []
+# start_node = Node("Program")
+# end_node = Node("$")
+# stack.append(start_node)
+# stack.append(end_node)
+# stack.reverse()
+# token = get_next_token(input1)
+# while len(stack) != 0:
+#     node = stack[len(stack) - 1]
+#     if node.name in non_terminals:
+#         action = ""
+#         if (token.type == "ID" or token.type == "NUM"):
+#             if (node.name, token.type) not in parse_table:
+#                 error_text.append(f"#{line_counter} : syntax error, illegal {token.type}")
+#                 token = get_next_token(input1)
+#                 continue
+#             if parse_table[(node.name, token.type)] == "SYNCH":
+#                 error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
+#                 removed_token = stack.pop()
+#                 removed_token.parent = None
+#                 continue
+#             action = parse_table[(node.name, token.type)]
+#
+#         else:
+#             if (node.name, token.lexeme) not in parse_table:
+#                 if token.lexeme == '$' and node.name != '$':
+#                     error_text.append(f"#{line_counter} : syntax error, Unexpected EOF")
+#                     break
+#                 error_text.append(f"#{line_counter} : syntax error, illegal {token.lexeme}")
+#                 token = get_next_token(input1)
+#                 continue
+#             if parse_table[(node.name, token.lexeme)] == "SYNCH":
+#                 error_text.append(f"#{line_counter} : syntax error, missing {node.name}")
+#                 removed_token = stack.pop()
+#                 removed_token.parent = None
+#                 continue
+#             action = parse_table[(node.name, token.lexeme)]
+#         action = action.split(' ')
+#         removed_node = stack.pop()
+#         nodes_to_add = []
+#         for i in range(len(action)):
+#             if action[i] != "EPSILON":
+#                 nodes_to_add.append(Node(action[i], parent=removed_node))
+#             else:
+#                 epsilon_node = Node("epsilon", parent=removed_node)
+#         for i in range(len(nodes_to_add)):
+#             stack.append(nodes_to_add[len(nodes_to_add) - 1 - i])
+#
+#     elif node.name in terminals:
+#         removed_token = stack.pop()
+#         if (removed_token.name == 'NUM' or removed_token.name == "ID"):
+#             if (removed_token.name != token.type):
+#                 removed_token.parent = None
+#                 error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
+#                 continue
+#         elif (removed_token.name != token.lexeme):
+#             removed_token.parent = None
+#             error_text.append(f"#{line_counter} : syntax error, missing {removed_token.name}")
+#             continue
+#         removed_token.name = f'({token.type}, {token.lexeme})'
+#         token = get_next_token(input1)
+#
+#     else:
+#         stack.pop()
+# end_node.parent = start_node
+# for i in stack:
+#     i.parent = None
 
 file = open("parse_tree.txt", "w", encoding="utf-8")
 result = ""
@@ -406,99 +524,11 @@ file.write(result)
 file.close()
 
 file = open("syntax_errors.txt", "w")
-if len(error_text) == 0:
+if len(errors) == 0:
     file.write("There is no syntax error.")
 else:
-    for i in range(len(error_text)):
-        if (i == len(error_text) - 1):
-            file.write(f"{error_text[i]}")
-        else:
-            file.write(f"{error_text[i]} \n")
-# first_set = {
-#     'Type': ['id', 'array', 'integer', 'char', 'num'],
-#     'Simple': ['integer', 'char', 'num']
-# }
-#
-# follow_set = {
-#     'Type': ['$'],
-#     'Simple': ['$', ']']
-# }
-# nodes = []
-# nodes_value = []
-#
-#
-# def Type():
-#     if lookahead in first_set['Simple']:
-#         nodes.append(Node("simple", parent= nodes[get_parent("type")]))
-#         nodes_value.append("simple")
-#         Simple()
-#     elif lookahead == 'id':
-#         nodes.append(Node("id", parent=nodes[get_parent("type")]))
-#         nodes_value.append("id")
-#         Match('id')
-#     elif lookahead == 'array':
-#         nodes.append(Node("array", parent= nodes[get_parent("type")]))
-#         nodes_value.append("array")
-#         Match('array')
-#         nodes.append(Node("[", parent=nodes[get_parent("type")]))
-#         nodes_value.append("[")
-#         Match('[')
-#         nodes.append(Node("simple", parent=nodes[get_parent("type")]))
-#         nodes_value.append("simple")
-#         Simple()
-#         nodes.append(Node("]", parent=nodes[get_parent("type")]))
-#         nodes_value.append("]")
-#         Match(']')
-#         nodes.append(Node("of", parent=nodes[get_parent("type")]))
-#         nodes_value.append("of")
-#         Match('of')
-#         nodes.append(Node("type", parent=nodes[get_parent("type")]))
-#         nodes_value.append("type")
-#         Type()
-#
-#
-#
-#
-#
-# def Simple():
-#     if lookahead == 'integer':
-#         nodes.append(Node("integer", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("integer")
-#         Match('integer')
-#     elif lookahead == 'char':
-#         nodes.append(Node("char", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("char")
-#         Match('char')
-#     elif lookahead == 'num':
-#         nodes.append(Node("num", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("num")
-#         Match('num')
-#         nodes.append(Node("dotdot", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("dotdot")
-#         Match('dotdot')
-#         nodes.append(Node("num", parent=nodes[get_parent("simple")]))
-#         nodes_value.append("num")
-#         Match('num')
-#
-# def Match(expected_token):
-#     global lookahead
-#     if lookahead == expected_token:
-#         token = get_next_token(input)
-#         if token != None:
-#             lookahead = token.lexeme
-#
-#
-#
-# def get_parent(value):
-#     for i in range(len(nodes_value) - 1, -1, -1):
-#         if nodes_value[i] == value:
-#             return i
-#         continue
-#
-#
-# input = "array [ num dotdot num ] of integer"
-# lookahead = "array"
-# start_node = Node("type")
-# nodes.append(start_node)
-# nodes_value.append("type")
-# Type()
+    for i in range(len(errors)):
+        # if (i == len(errors) - 1):
+        #     file.write(f"{errors[i]}")
+        # else:
+        file.write(f"{errors[i]}\n")
