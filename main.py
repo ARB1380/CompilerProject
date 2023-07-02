@@ -6,6 +6,8 @@ from anytree import Node, RenderTree
 import json
 
 import constant
+from SymbolTable import SymbolTable
+from cede_generator import cede_generator
 from dfa import dfa
 from Token import Token
 
@@ -72,9 +74,11 @@ def start(type):
 def get_token(type, lexeme):
     reset_dfa()
     if type == "ID" and is_keyword(lexeme):
+        if lexeme not in sym.symbol_table:
+            sym.symbol_table[lexeme] = get_free_address()
         return Token("KEYWORD", lexeme)
-    if type == "ID" and not lexeme in keywords_and_identifiers:
-        keywords_and_identifiers.append(lexeme)
+    if type == "ID" and not lexeme in sym.symbol_table and not lexeme == 'main':
+        sym.symbol_table[lexeme] = get_free_address()
     return Token(type, lexeme)
 
 
@@ -211,6 +215,32 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
+action_symbols = ['#p_id','#declare_id','#assign','#p_num','#add','#cal']
+def is_action_symbol(action):
+    return action in action_symbols
+
+def call_action_symbol_routine(action_symbol):
+    if action_symbol == '#p_id':
+        if look_ahead.lexeme == 'main':
+            return
+        code_generator.token = look_ahead.lexeme
+        code_generator.push_id()
+    if action_symbol == '#declare_id':
+        code_generator.declare_id()
+    if action_symbol == '#assign':
+        code_generator.assign()
+    if action_symbol == '#p_num':
+        code_generator.token = look_ahead.lexeme
+        code_generator.push_num()
+    if action_symbol == '#add':
+        code_generator.plus()
+    if action_symbol == '#cal':
+        code_generator.calc(get_free_address())
+
+
+
+
+
 def start_parse(node):
     global look_ahead
     global has_eof_error
@@ -262,19 +292,26 @@ def start_parse(node):
                 return
 
     for action in rule.split(' '):
+        if is_action_symbol(action):
+            call_action_symbol_routine(action)
+            continue
+
         if look_ahead.lexeme == '$' and has_eof_error:
             return
 
         new_node = Node(action, parent=node)
         if action == 'EPSILON':
             new_node.name = 'epsilon'
+
         start_parse(new_node)
     return
 
 
 def get_rule(non_terminal, token):
     productions = rules[non_terminal]
-    for production in productions.split('|'):
+    symbols = productions.split('|')
+    symbols = [item for item in symbols if not item.startswith('#')]
+    for production in symbols:
         production = production.strip()
         if production != "EPSILON" and is_in_first_of_production(token, production):
             return production
@@ -286,6 +323,7 @@ def get_rule(non_terminal, token):
 
 def is_in_first_of_production(token, production):
     symbols = production.split(' ')
+    symbols = [item for item in symbols if not item.startswith('#')]
     for symbol in symbols:
         if symbol in terminals:
             if token.type == "ID" or token.type == "NUM":
@@ -314,12 +352,20 @@ def moves_to_epsilon(production):
     if production == "EPSILON":
         return True
     symbols = production.split(' ')
+    symbols = [item for item in symbols if not item.startswith('#')]
     for symbol in symbols:
         if symbol in terminals:
             return False
         if "EPSILON" not in first_dict[symbol]:
             return False
     return True
+
+def get_free_address():
+    global free_address
+    result1 = free_address
+    free_address += 4
+    return result1
+
 
 
 file = open("input.txt", "r")
@@ -334,7 +380,8 @@ symbols_x = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<
 
 # total_errors = []
 keywords = {"break", "else", "if", "int", "repeat", "return", "until", "void"}
-keywords_and_identifiers = ["break", "else", "if", "int", "repeat", "return", "until", "void"]
+sym = SymbolTable()
+free_address = 500
 current_index = 0
 # lexical_error = False
 # counter = 1
@@ -401,6 +448,7 @@ look_ahead = ""
 look_ahead = get_next_token(input1)
 errors = []
 has_eof_error = False
+code_generator = cede_generator(sym.symbol_table) #todo : fix
 start_parse(start_node)
 if not has_eof_error:
     end_node = Node("$", parent=start_node)
@@ -532,3 +580,4 @@ else:
         #     file.write(f"{errors[i]}")
         # else:
         file.write(f"{errors[i]}\n")
+

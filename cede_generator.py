@@ -3,8 +3,8 @@ def get_str_val(item: list) -> str:
 
 
 class cede_generator:
-    def __init__(self, keywords_and_identifiers: list[str]) -> None:
-        self.symbol_table = keywords_and_identifiers
+    def __init__(self, symbol_table) -> None:
+        self.symbol_table = symbol_table
         self.program_block = [[None, None, None, None] for _ in range(100)]  # program block
         self.stack = []  # semantic stack
         self.breaks_link = []  # linked list used for implementation of breaks
@@ -64,9 +64,9 @@ class cede_generator:
         self.program_counter += 1
 
     # calculates an operational command (+, -, *, /, <, ==)
-    def calc(self):
+    def calc(self,free_address):
         op = self.stack[-2][0]
-        t = self.get_temp()
+        t = free_address
         x = get_str_val(self.stack[-3])
         y = get_str_val(self.stack[-1])
         self.program_block[self.program_counter] = [op, x, y, t]
@@ -95,7 +95,7 @@ class cede_generator:
         self.stack.append(('DIV', 0))
 
     def get_index(self):
-        return self.symbol_table.index(self.token) + 100
+        return self.symbol_table[self.token]
 
     # pushes the ID of the next input (token) to the stack
     def push_id(self):
@@ -155,3 +155,9 @@ class cede_generator:
     def switch_jump(self):
         while self.breaks_link and self.breaks_link[-1][1] == self.current_scope:
             self.program_block[self.breaks_link.pop()[0]] = ['JP', self.program_counter, None, None]
+
+    def declare_id(self):
+        id = self.stack[-1]
+        self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(id), None]
+        self.stack.pop()
+        self.program_counter += 1
