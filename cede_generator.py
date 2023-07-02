@@ -64,7 +64,7 @@ class cede_generator:
         self.program_counter += 1
 
     # calculates an operational command (+, -, *, /, <, ==)
-    def calc(self,free_address):
+    def calc(self, free_address):
         op = self.stack[-2][0]
         t = free_address
         x = get_str_val(self.stack[-3])
@@ -161,3 +161,12 @@ class cede_generator:
         self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(id), None]
         self.stack.pop()
         self.program_counter += 1
+
+    # use for repeat if condition false
+    def until(self):
+        top = self.stack[-1]
+        top2 = self.stack[-2]
+        self.program_block[self.program_counter] = ['JPF', get_str_val(top), get_str_val(top2), None]
+        self.program_counter += 1
+        for i in range(2):
+            self.stack.pop()
