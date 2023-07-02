@@ -299,8 +299,11 @@ def start_parse(node):
             continue
         if look_ahead.lexeme == 'output':
             look_ahead = get_next_token(input1)
-            code_generator.print_out()
             look_ahead = get_next_token(input1)
+            code_generator.token = look_ahead.lexeme
+            code_generator.push_id()
+            look_ahead = get_next_token(input1)
+            code_generator.print_out()
             return
         if look_ahead.lexeme == '$' and has_eof_error:
             return
