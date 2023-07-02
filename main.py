@@ -215,13 +215,18 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
-action_symbols = ['#p_id','#declare_id','#assign','#p_num','#add','#cal']
+action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal']
+
+
 def is_action_symbol(action):
     return action in action_symbols
+
 
 def call_action_symbol_routine(action_symbol):
     if action_symbol == '#p_id':
         if look_ahead.lexeme == 'main':
+            code_generator.line_counter = line_counter
+            code_generator.add_call()
             return
         code_generator.token = look_ahead.lexeme
         code_generator.push_id()
@@ -236,9 +241,6 @@ def call_action_symbol_routine(action_symbol):
         code_generator.plus()
     if action_symbol == '#cal':
         code_generator.calc(get_free_address())
-
-
-
 
 
 def start_parse(node):
@@ -295,7 +297,11 @@ def start_parse(node):
         if is_action_symbol(action):
             call_action_symbol_routine(action)
             continue
-
+        if look_ahead.lexeme == 'output':
+            look_ahead = get_next_token(input1)
+            code_generator.print_out()
+            look_ahead = get_next_token(input1)
+            return
         if look_ahead.lexeme == '$' and has_eof_error:
             return
 
@@ -360,12 +366,12 @@ def moves_to_epsilon(production):
             return False
     return True
 
+
 def get_free_address():
     global free_address
     result1 = free_address
     free_address += 4
     return result1
-
 
 
 file = open("input.txt", "r")
@@ -448,7 +454,7 @@ look_ahead = ""
 look_ahead = get_next_token(input1)
 errors = []
 has_eof_error = False
-code_generator = cede_generator(sym.symbol_table) #todo : fix
+code_generator = cede_generator(sym.symbol_table)  # todo : fix
 start_parse(start_node)
 if not has_eof_error:
     end_node = Node("$", parent=start_node)
@@ -570,7 +576,16 @@ for pre, _, node in RenderTree(start_node):
 result = result[:-1]
 file.write(result)
 file.close()
-
+file = open("output.txt", "w", encoding="utf-8")
+for i in range(len(code_generator.program_block)):
+    var0 = code_generator.program_block[i][0]
+    if var0 is None:
+        break
+    var1 = code_generator.program_block[i][1]
+    var2 = code_generator.program_block[i][2] if code_generator.program_block[i][2] is not None else ' '
+    var3 = code_generator.program_block[i][3] if code_generator.program_block[i][3] is not None else ' '
+    file.write(f"{i}\t({var0}, {var1}, {var2}, {var3} )\n")
+file.close()
 file = open("syntax_errors.txt", "w")
 if len(errors) == 0:
     file.write("There is no syntax error.")
@@ -580,4 +595,3 @@ else:
         #     file.write(f"{errors[i]}")
         # else:
         file.write(f"{errors[i]}\n")
-
