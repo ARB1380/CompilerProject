@@ -14,6 +14,7 @@ class cede_generator:
         self.funcs = {}  # code generator functions
         self.token = ''  # next input called as current token
         self.line_counter = 0
+        self.line_count = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -174,5 +175,5 @@ class cede_generator:
 
     def add_call(self):
         self.program_block[0] = ['ASSIGN', '#4', 0, None]
-        self.program_block[1] = ['JP', self.line_counter - 1, None, None]
+        self.program_block[1] = ['JP', self.line_counter - self.line_count, None, None]
         self.program_counter += 2

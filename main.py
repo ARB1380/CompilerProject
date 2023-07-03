@@ -97,7 +97,7 @@ def is_invalid_character(character):
 
 
 def get_next_token(input):
-    global current_index, comment_string, line_counter, next_line
+    global current_index, comment_string, line_counter, next_line, line_count
     start_index = current_index
     line_counter = next_line
     while current_index != len(input):
@@ -192,6 +192,8 @@ def get_next_token(input):
             if (current_index == start_index):
                 line_counter += 1
                 next_line += 1
+                if (input[current_index - 1] == '\n'):
+                    line_count += 1
             else:
                 next_line += 1
             current_index += 1
@@ -215,7 +217,7 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
-action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal','#mul', '#sub','#less_than']
+action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than']
 
 
 def is_action_symbol(action):
@@ -226,6 +228,7 @@ def call_action_symbol_routine(action_symbol):
     if action_symbol == '#p_id':
         if look_ahead.lexeme == 'main':
             code_generator.line_counter = line_counter
+            code_generator.line_count = line_count
             code_generator.add_call()
             return
         code_generator.token = look_ahead.lexeme
@@ -316,7 +319,7 @@ def start_parse(node):
             look_ahead = get_next_token(input1)
             look_ahead = get_next_token(input1)
             # continue
-            #return
+            # return
         if look_ahead.lexeme == '$' and has_eof_error:
             return
 
@@ -392,6 +395,7 @@ def get_free_address():
 file = open("input.txt", "r")
 input1 = file.read()
 line_counter = 1
+line_count = 0
 next_line = 1
 # token_file = open("tokens.txt", "a")
 # symbol_file = open("symbol_table.txt", "a")
