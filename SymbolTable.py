@@ -7,3 +7,6 @@ class SymbolTable:
 
     def get_address(self, lexeme):
         return self.symbol_table[lexeme]
+
+    def remove_id(self, key):
+        del self.symbol_table[key]

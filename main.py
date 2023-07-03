@@ -215,7 +215,7 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
-action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal']
+action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal','#mul', '#sub','#less_than']
 
 
 def is_action_symbol(action):
@@ -239,6 +239,12 @@ def call_action_symbol_routine(action_symbol):
         code_generator.push_num()
     if action_symbol == '#add':
         code_generator.plus()
+    if action_symbol == '#mul':
+        code_generator.mul()
+    if action_symbol == '#sub':
+        code_generator.minus()
+    if action_symbol == '#less_than':
+        code_generator.less_than()
     if action_symbol == '#cal':
         code_generator.calc(get_free_address())
 
@@ -246,6 +252,7 @@ def call_action_symbol_routine(action_symbol):
 def start_parse(node):
     global look_ahead
     global has_eof_error
+    global free_address
     print(node.name)
     if node.name in terminals:
         if node.name == 'NUM' or node.name == 'ID':
@@ -298,13 +305,18 @@ def start_parse(node):
             call_action_symbol_routine(action)
             continue
         if look_ahead.lexeme == 'output':
+            sym.remove_id('output')
+            free_address -= 4
             look_ahead = get_next_token(input1)
             look_ahead = get_next_token(input1)
             code_generator.token = look_ahead.lexeme
             code_generator.push_id()
             look_ahead = get_next_token(input1)
             code_generator.print_out()
-            return
+            look_ahead = get_next_token(input1)
+            look_ahead = get_next_token(input1)
+            # continue
+            #return
         if look_ahead.lexeme == '$' and has_eof_error:
             return
 
