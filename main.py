@@ -150,10 +150,10 @@ def get_next_token(input):
                     else:
                         return get_token("SYMBOL", "=")
 
-                elif (input[copy_current_index] == "*" and not is_white_space(input[current_index])):
-                    append_error(constant.UNMATCHED_COMMENT, get_lexeme(input, start_index, current_index + 1))
-                    current_index += 1
-                    start_index = current_index
+                # elif (input[copy_current_index] == "*" and not is_white_space(input[current_index])):
+                #     append_error(constant.UNMATCHED_COMMENT, get_lexeme(input, start_index, current_index + 1))
+                #     current_index += 1
+                #     start_index = current_index
                 else:
                     token = input[copy_current_index]
                     return get_token("SYMBOL", token)

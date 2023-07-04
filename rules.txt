@@ -36,7 +36,7 @@ Term-zegond -> Factor-zegond G
 G -> * #mul Factor #cal G | EPSILON
 Factor -> ( Expression ) | #p_id ID Var-call-prime | #p_num NUM
 Var-call-prime -> ( Args ) | Var-prime
-Var-prime -> [ Expression ] | EPSILON
+Var-prime -> [ Expression ] #test | EPSILON
 Factor-prime -> ( Args ) | EPSILON
 Factor-zegond -> ( Expression ) | #p_num NUM
 Args -> Arg-list | EPSILON
