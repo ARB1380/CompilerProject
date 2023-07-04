@@ -16,6 +16,7 @@ class cede_generator:
         self.line_counter = 0
         self.line_count = 0
         self.variable = 500
+        self.has_break = False
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -125,6 +126,15 @@ class cede_generator:
 
     # push the index and than jpf (used for if-else)
     def save_jpf(self):
+        if self.has_break:
+            x = get_str_val(self.stack[-3])
+            self.program_block[self.stack[-2][0]] = ['JPF', x, self.program_counter + 1, None]
+            self.stack.append((self.program_counter, 0))
+            self.program_counter += 1
+            self.stack.remove(self.stack[-3])
+            self.stack.remove(self.stack[-3])
+            return
+
         x = get_str_val(self.stack[-2])
         self.program_block[self.stack.pop()[0]] = ['JPF', x, self.program_counter + 1, None]
         self.stack.pop()
@@ -179,6 +189,10 @@ class cede_generator:
 
     # use for repeat if condition false
     def until(self):
+        if self.has_break:
+            self.program_block[self.stack[-2][0]] = ['JP', self.program_counter + 1, None, None]
+            self.stack.remove(self.stack[-2])
+
         top = self.stack[-1]
         top2 = self.stack[-2]
         self.program_block[self.program_counter] = ['JPF', get_str_val(top), get_str_val(top2), None]
@@ -190,3 +204,9 @@ class cede_generator:
         self.program_block[0] = ['ASSIGN', '#4', 0, None]
         self.program_block[1] = ['JP', self.line_counter - self.line_count, None, None]
         self.program_counter += 2
+
+    def break_save(self):
+        self.stack.append((self.program_counter, 0))
+        self.program_counter += 1
+        self.has_break = True
+

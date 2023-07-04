@@ -218,7 +218,7 @@ def get_next_token(input):
 
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
-                  '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal']
+                  '#declare_arr', '#test','#label','#until','#save','#save_jpf','#jp','#print','#equal','#break_save']
 
 
 def is_action_symbol(action):
@@ -274,6 +274,10 @@ def call_action_symbol_routine(action_symbol):
         code_generator.print_out()
     if action_symbol == '#equal':
         code_generator.equal()
+    if action_symbol == '#break_save':
+        code_generator.break_save()
+
+
 
 
 def start_parse(node):

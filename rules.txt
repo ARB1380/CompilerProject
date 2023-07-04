@@ -13,7 +13,7 @@ Param-prime -> [ ] | EPSILON
 Compound-stmt -> { Declaration-list Statement-list }
 Statement-list -> Statement Statement-list | EPSILON
 Statement -> Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
-Expression-stmt -> Expression ; | break ; | ;
+Expression-stmt -> Expression ; | break ; #break_save | ;
 Selection-stmt -> if ( Expression ) #save Statement #save_jpf else Statement #jp
 Iteration-stmt -> repeat #label Statement until ( Expression ) #until
 Return-stmt -> return Return-stmt-prime
