@@ -58,6 +58,7 @@ class cede_generator:
         x = get_str_val(self.stack.pop())
         self.program_block[self.program_counter] = ['PRINT', x, None, None]
         self.program_counter += 1
+        self.stack.pop()
 
     # assign implementation
     def assign(self):
