@@ -17,6 +17,7 @@ class cede_generator:
         self.line_count = 0
         self.variable = 500
         self.has_break = False
+        self.return_size = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -63,10 +64,13 @@ class cede_generator:
 
     # assign implementation
     def assign(self):
-        x = get_str_val(self.stack.pop())
-        y = get_str_val(self.stack[-1])
-        self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
-        self.program_counter += 1
+        while (self.return_size != 0):
+            x = get_str_val(self.stack.pop())
+            y = get_str_val(self.stack[-1])
+            self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
+            self.program_counter += 1
+            self.return_size -= 1
+        self.return_size = 0
         self.stack.pop()
 
     # calculates an operational command (+, -, *, /, <, ==)

@@ -218,7 +218,8 @@ def get_next_token(input):
 
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
-                  '#declare_arr', '#test','#label','#until','#save','#save_jpf','#jp','#print','#equal','#break_save']
+                  '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
+                  '#break_save']
 
 
 def is_action_symbol(action):
@@ -238,6 +239,8 @@ def call_action_symbol_routine(action_symbol):
     if action_symbol == '#declare_id':
         code_generator.declare_id()
     if action_symbol == '#assign':
+        if len(code_generator.stack) < 2:
+            return
         code_generator.assign()
     if action_symbol == '#p_num':
         code_generator.token = look_ahead.lexeme
@@ -278,13 +281,10 @@ def call_action_symbol_routine(action_symbol):
         code_generator.break_save()
 
 
-
-
 def start_parse(node):
     global look_ahead
     global has_eof_error
     global free_address
-    print(node.name)
     if node.name in terminals:
         if node.name == 'NUM' or node.name == 'ID':
             if look_ahead.type != node.name:
@@ -293,6 +293,9 @@ def start_parse(node):
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
                 look_ahead = get_next_token(input1)
+                print(look_ahead.lexeme)
+                if look_ahead.lexeme == '=':
+                    code_generator.return_size += 1
         else:
             if look_ahead.lexeme != node.name:
                 errors.append(f"#{line_counter} : syntax error, missing {node.name}")
@@ -300,6 +303,9 @@ def start_parse(node):
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
                 look_ahead = get_next_token(input1)
+                print(look_ahead.lexeme)
+                if look_ahead.lexeme == '=':
+                    code_generator.return_size += 1
         return
     if node.name == "epsilon":
         return
@@ -311,6 +317,9 @@ def start_parse(node):
                 errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.type}")
                 look_ahead = get_next_token(input1)
                 rule = get_rule(node.name, look_ahead)
+                print(look_ahead.lexeme)
+                if look_ahead.lexeme == '=':
+                    code_generator.return_size += 1
             else:
                 errors.append(f"#{line_counter} : syntax error, missing {node.name}")
                 node.parent = None
@@ -325,6 +334,9 @@ def start_parse(node):
                 else:
                     errors.append(f"#{line_counter} : syntax error, illegal {look_ahead.lexeme}")
                     look_ahead = get_next_token(input1)
+                    print(look_ahead.lexeme)
+                    if look_ahead.lexeme == '=':
+                        code_generator.return_size += 1
                     rule = get_rule(node.name, look_ahead)
             else:
                 errors.append(f"#{line_counter} : syntax error, missing {node.name}")
