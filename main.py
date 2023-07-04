@@ -218,7 +218,7 @@ def get_next_token(input):
 
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
-                  '#declare_arr', '#test']
+                  '#declare_arr', '#test','#label','#until']
 
 
 def is_action_symbol(action):
@@ -260,6 +260,11 @@ def call_action_symbol_routine(action_symbol):
         code_generator.variable = free_address
         code_generator.arr_access()
         free_address = code_generator.variable
+    if action_symbol == '#label':
+        code_generator.label()
+    if action_symbol == '#until':
+        code_generator.until()
+
 
 
 def start_parse(node):
@@ -325,6 +330,15 @@ def start_parse(node):
             code_generator.token = look_ahead.lexeme
             code_generator.push_id()
             look_ahead = get_next_token(input1)
+            if look_ahead.lexeme == '[':
+                look_ahead = get_next_token(input1)
+                code_generator.token = look_ahead.lexeme
+                code_generator.push_id()
+                code_generator.variable = free_address
+                code_generator.arr_access()
+                free_address = code_generator.variable
+                look_ahead = get_next_token(input1)
+                look_ahead = get_next_token(input1)
             code_generator.print_out()
             look_ahead = get_next_token(input1)
             look_ahead = get_next_token(input1)

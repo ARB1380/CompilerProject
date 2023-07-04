@@ -65,6 +65,7 @@ class cede_generator:
         y = get_str_val(self.stack[-1])
         self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
         self.program_counter += 1
+        self.stack.pop()
 
     # calculates an operational command (+, -, *, /, <, ==)
     def calc(self, free_address):
