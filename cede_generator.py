@@ -15,6 +15,7 @@ class cede_generator:
         self.token = ''  # next input called as current token
         self.line_counter = 0
         self.line_count = 0
+        self.variable = 500
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -137,19 +138,28 @@ class cede_generator:
         self.program_counter += 1
         self.save()
 
-    # # set size of the array
-    # def arr_declare(self):
-    #     self.lexer.DFA.set_size(self.token, self.stack.pop()[0], self.lexer.symbols)
+    # set size of the array
+    def arr_declare(self):
+        size = self.stack[-1][0]
+        # self.symbol_table[self.token] = ((self.stack[-2]), size)
+        self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(self.stack[-2]), None]
+        self.variable += (size - 1) * 4
+        self.program_counter += 1
+        self.stack.pop()
+        self.stack.pop()
 
     # we should play with addresses, and we did that in this function
     def arr_access(self):
-        t = self.get_temp()
-        x = self.stack.pop()
-        x = ('' if not x[1] else '#' if x[1] == 1 else '@') + str(x[0])
+        t = self.variable
+        address = self.stack[-2][0]
+        num = self.stack[-1]
+        x = ('' if not num[1] else '#' if num[1] == 1 else '@') + str(num[0])
         self.program_block[self.program_counter] = ['MULT', x, '#4', t]
         x = self.stack.pop()
         x = ('' if not x[1] else '#' if x[1] == 1 else '@') + str(x[0])
-        self.program_block[self.program_counter + 1] = ['ADD', f'#{x}', t, t]
+        self.program_block[self.program_counter + 1] = ['ADD', f'#{address}', t, t]
+        self.stack.pop()
+        self.variable += 4
         self.stack.append((t, 2))
         self.program_counter += 2
 
@@ -161,6 +171,7 @@ class cede_generator:
     def declare_id(self):
         id = self.stack[-1]
         self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(id), None]
+        # self.symbol_table[self.token] = ((self.stack[-1]), 1)
         self.stack.pop()
         self.program_counter += 1
 

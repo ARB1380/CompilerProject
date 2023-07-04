@@ -217,7 +217,8 @@ def get_next_token(input):
     return get_token("X", "$")
 
 
-action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than']
+action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
+                  '#declare_arr', '#test']
 
 
 def is_action_symbol(action):
@@ -225,6 +226,7 @@ def is_action_symbol(action):
 
 
 def call_action_symbol_routine(action_symbol):
+    global free_address
     if action_symbol == '#p_id':
         if look_ahead.lexeme == 'main':
             code_generator.line_counter = line_counter
@@ -250,6 +252,14 @@ def call_action_symbol_routine(action_symbol):
         code_generator.less_than()
     if action_symbol == '#cal':
         code_generator.calc(get_free_address())
+    if action_symbol == '#declare_arr':
+        code_generator.variable = free_address
+        code_generator.arr_declare()
+        free_address = code_generator.variable
+    if action_symbol == '#test':
+        code_generator.variable = free_address
+        code_generator.arr_access()
+        free_address = code_generator.variable
 
 
 def start_parse(node):
