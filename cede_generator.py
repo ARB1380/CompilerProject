@@ -201,12 +201,14 @@ class cede_generator:
             self.stack.pop()
 
     def add_call(self):
-        self.program_block[0] = ['ASSIGN', '#4', 0, None]
-        self.program_block[1] = ['JP', self.line_counter - self.line_count, None, None]
+        befor_list = self.program_block[:]
+        self.program_block = []
+        self.program_block.append(['ASSIGN', '#4', 0, None])
+        self.program_block.append(['JP', self.line_counter - self.line_count, None, None])
+        self.program_block += befor_list
         self.program_counter += 2
 
     def break_save(self):
         self.stack.append((self.program_counter, 0))
         self.program_counter += 1
         self.has_break = True
-
