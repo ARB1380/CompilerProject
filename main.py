@@ -219,7 +219,7 @@ def get_next_token(input):
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
                   '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
-                  '#break_save']
+                  '#break_save', '#test2', '#test3']
 
 
 def is_action_symbol(action):
@@ -263,6 +263,12 @@ def call_action_symbol_routine(action_symbol):
         code_generator.variable = free_address
         code_generator.arr_access()
         free_address = code_generator.variable
+    if action_symbol == '#test2':
+        print("param")
+        # for declare a simple param
+    if action_symbol == '#test3':
+        print("param list")
+        # for declare param list
     if action_symbol == '#label':
         code_generator.label()
     if action_symbol == '#until':
