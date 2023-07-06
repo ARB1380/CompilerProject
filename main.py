@@ -219,7 +219,7 @@ def get_next_token(input):
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
                   '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
-                  '#break_save', '#test2', '#test3', '#test5', '#start_get_var', '#end_get_var']
+                  '#break_save', '#test2', '#test3', '#test5', '#start_get_var', '#end_get_var', '#add_empty_block']
 
 
 def is_action_symbol(action):
@@ -264,14 +264,14 @@ def call_action_symbol_routine(action_symbol):
         code_generator.arr_access()
         free_address = code_generator.variable
     if action_symbol == '#test2':
-        print("param")
+        code_generator.number_of_assign_var += 1
         # for declare a simple param
     if action_symbol == '#test3':
-        print("param list")
+        code_generator.number_of_assign_var += 1
         # for declare param list
     if action_symbol == '#test5':
+        # this action for count number of var pass to func
         code_generator.number_of_input_var += 1
-        # for push variable to stack
     if action_symbol == '#label':
         code_generator.label()
     if action_symbol == '#until':
@@ -292,6 +292,8 @@ def call_action_symbol_routine(action_symbol):
         code_generator.is_input_var = True
     if action_symbol == '#end_get_var':
         code_generator.is_input_var = False
+    if action_symbol == '#add_empty_block':
+        code_generator.add_empty_block()
 
 
 def start_parse(node):

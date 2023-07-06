@@ -20,6 +20,7 @@ class cede_generator:
         self.return_size = 0
         self.is_input_var = False
         self.number_of_input_var = 0
+        self.number_of_assign_var = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -229,3 +230,9 @@ class cede_generator:
         self.stack.append((self.program_counter, 0))
         self.program_counter += 1
         self.has_break = True
+
+    def init_assign_func(self):
+        self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(self.stack[-2]), None]
+
+    def add_empty_block(self):
+        self.program_counter += self.number_of_assign_var
