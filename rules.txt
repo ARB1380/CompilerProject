@@ -35,10 +35,10 @@ Term-prime -> Factor-prime G
 Term-zegond -> Factor-zegond G
 G -> * #mul Factor #cal G | EPSILON
 Factor -> ( Expression ) | #p_id ID Var-call-prime | #p_num NUM
-Var-call-prime -> ( Args ) | Var-prime
+Var-call-prime -> ( #start_get_var Args ) #end_get_var | Var-prime
 Var-prime -> [ Expression ] #test | EPSILON
 Factor-prime -> ( Args ) #print| EPSILON
 Factor-zegond -> ( Expression ) | #p_num NUM
 Args -> Arg-list | EPSILON
-Arg-list -> Expression Arg-list-prime
-Arg-list-prime -> , Expression Arg-list-prime | EPSILON
+Arg-list -> Expression Arg-list-prime #test5
+Arg-list-prime -> , Expression Arg-list-prime #test5 | EPSILON

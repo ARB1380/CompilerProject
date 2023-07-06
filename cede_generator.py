@@ -18,6 +18,8 @@ class cede_generator:
         self.variable = 500
         self.has_break = False
         self.return_size = 0
+        self.is_input_var = False
+        self.number_of_input_var = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -64,14 +66,25 @@ class cede_generator:
 
     # assign implementation
     def assign(self):
-        while (self.return_size != 0):
-            x = get_str_val(self.stack.pop())
-            y = get_str_val(self.stack[-1])
-            self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
-            self.program_counter += 1
-            self.return_size -= 1
-        self.return_size = 0
-        self.stack.pop()
+        if not self.is_input_var:
+            while self.return_size != 0:
+                x = get_str_val(self.stack.pop())
+                y = get_str_val(self.stack[-1])
+                self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
+                self.program_counter += 1
+                self.return_size -= 1
+            self.return_size = 0
+            self.stack.pop()
+        else:
+            # next while work when assign for starter line func   --notice: this while should change, and add number of var passing
+            while self.return_size != 0:
+                x = '@' + self.stack.pop()[0]
+                y = get_str_val(self.stack[-1])
+                self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
+                self.program_counter += 1
+                self.return_size -= 1
+            self.return_size = 0
+            self.stack.pop()
 
     # calculates an operational command (+, -, *, /, <, ==)
     def calc(self, free_address):

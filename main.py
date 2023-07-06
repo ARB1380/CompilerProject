@@ -219,7 +219,7 @@ def get_next_token(input):
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
                   '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
-                  '#break_save', '#test2', '#test3']
+                  '#break_save', '#test2', '#test3', '#test5', '#start_get_var', '#end_get_var']
 
 
 def is_action_symbol(action):
@@ -269,6 +269,9 @@ def call_action_symbol_routine(action_symbol):
     if action_symbol == '#test3':
         print("param list")
         # for declare param list
+    if action_symbol == '#test5':
+        code_generator.number_of_input_var += 1
+        # for push variable to stack
     if action_symbol == '#label':
         code_generator.label()
     if action_symbol == '#until':
@@ -285,6 +288,10 @@ def call_action_symbol_routine(action_symbol):
         code_generator.equal()
     if action_symbol == '#break_save':
         code_generator.break_save()
+    if action_symbol == '#start_get_var':
+        code_generator.is_input_var = True
+    if action_symbol == '#end_get_var':
+        code_generator.is_input_var = False
 
 
 def start_parse(node):
