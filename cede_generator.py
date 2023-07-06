@@ -9,7 +9,7 @@ class cede_generator:
         self.stack = []  # semantic stack
         self.breaks_link = []  # linked list used for implementation of breaks
         self.current_scope = 0  # scope counter
-        self.program_counter = 0  # index of the current line of program block
+        self.program_counter = 2  # index of the current line of program block
         self.temp_id = 996  # temp ID
         self.funcs = {}  # code generator functions
         self.token = ''  # next input called as current token
@@ -18,9 +18,6 @@ class cede_generator:
         self.variable = 500
         self.has_break = False
         self.return_size = 0
-        self.is_input_var = False
-        self.number_of_input_var = 0
-        self.number_of_assign_var = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -44,7 +41,11 @@ class cede_generator:
 
     # used for jumping before entering the else
     def endif(self) -> None:
-        self.program_block[self.stack.pop()[0]] = ['JP', self.program_counter, None, None]
+        x = self.stack.pop()
+        if x[1] != 0:
+            x = self.stack.pop()
+
+        self.program_block[x[0]] = ['JP', self.program_counter, None, None]
 
     # handles the while jumps
     def handle_while(self) -> None:
@@ -59,7 +60,9 @@ class cede_generator:
         self.current_scope -= 1
 
     # print the value of top of the stack
-    def print_out(self):
+    def print_out(self, function_name):
+        if function_name != '':
+            return
         x = get_str_val(self.stack.pop())
         self.program_block[self.program_counter] = ['PRINT', x, None, None]
         self.program_counter += 1
@@ -67,25 +70,14 @@ class cede_generator:
 
     # assign implementation
     def assign(self):
-        if not self.is_input_var:
-            while self.return_size != 0:
-                x = get_str_val(self.stack.pop())
-                y = get_str_val(self.stack[-1])
-                self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
-                self.program_counter += 1
-                self.return_size -= 1
-            self.return_size = 0
-            self.stack.pop()
-        else:
-            # next while work when assign for starter line func   --notice: this while should change, and add number of var passing
-            while self.return_size != 0:
-                x = '@' + self.stack.pop()[0]
-                y = get_str_val(self.stack[-1])
-                self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
-                self.program_counter += 1
-                self.return_size -= 1
-            self.return_size = 0
-            self.stack.pop()
+        while (self.return_size != 0):
+            x = get_str_val(self.stack.pop())
+            y = get_str_val(self.stack[-1])
+            self.program_block[self.program_counter] = ['ASSIGN', x, y, None]
+            self.program_counter += 1
+            self.return_size -= 1
+        self.return_size = 0
+        self.stack.pop()
 
     # calculates an operational command (+, -, *, /, <, ==)
     def calc(self, free_address):
@@ -219,20 +211,75 @@ class cede_generator:
             self.stack.pop()
 
     def add_call(self):
-        befor_list = self.program_block[:]
-        self.program_block = []
-        self.program_block.append(['ASSIGN', '#4', 0, None])
-        self.program_block.append(['JP', self.line_counter - self.line_count, None, None])
-        self.program_block += befor_list
-        self.program_counter += 2
+        self.program_block[0] = ['ASSIGN', '#4', 0, None]
+        self.program_block[1] = ['JP', self.program_counter, None, None]
+        # befor_list = self.program_block[:]
+        # self.program_block = []
+        # self.program_block.append(['ASSIGN', '#4', 0, None])
+        # # self.program_block.append(['JP', self.line_counter - self.line_count, None, None])
+        # self.program_block.append(['JP', self.program_counter, None, None])
+        # self.program_block += befor_list
+        # self.program_counter += 2
+
 
     def break_save(self):
         self.stack.append((self.program_counter, 0))
         self.program_counter += 1
         self.has_break = True
 
-    def init_assign_func(self):
-        self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(self.stack[-2]), None]
+    def save_return(self, address, function_name):
+        if function_name == 'main':
+            return
+        self.program_block[self.program_counter] = ['JP', get_str_val(address), None, None]
+        self.program_counter += 1
 
-    def add_empty_block(self):
-        self.program_counter += self.number_of_assign_var
+    def save_return_value(self,address_to_return_value,function_to_information, function_name):
+        #address_to_return_value[function_to_information[function_name]['return_value_address']] = self.stack.pop()[0]
+        self.program_block[self.program_counter] = ['ASSIGN', get_str_val(self.stack.pop()), function_to_information[function_name]['return_value_address'], None]
+        self.program_counter += 1
+
+    def save_params(self, function_to_information, function_name):
+        result = []
+        if len(self.stack) == 0:
+            return
+        while len(self.stack) != 1:
+            result.append(self.stack.pop())
+
+        result.reverse()
+        function_to_information[function_name]['params'] = result
+        self.stack = []
+        function_to_information[function_name]['start_address'] = self.program_counter
+
+        print(function_to_information[function_name]['params'])
+
+    def call_function(self, function_to_information, function_name):
+        if function_name == '':
+            return
+        parameters = function_to_information[function_name]['params']
+        for i in range(len(parameters)):
+            x = self.stack.pop()
+            self.program_block[self.program_counter] = ['ASSIGN', get_str_val(x), get_str_val(parameters[len(parameters) - 1 - i]), None]
+            self.program_counter += 1
+        return_address = function_to_information[function_name]['return_address']
+        y = (self.program_counter + 2, 1)
+        self.program_block[self.program_counter] = ['ASSIGN', get_str_val(y), return_address[0], None]
+        self.program_counter += 1
+        start_address = function_to_information[function_name]['start_address']
+        self.program_block[self.program_counter] = ['JP', start_address, None, None]
+        self.program_counter += 1
+        self.stack.pop()
+        self.stack.append((function_to_information[function_name]['return_value_address'], 0))
+
+
+
+
+
+
+
+
+
+
+
+
+
+

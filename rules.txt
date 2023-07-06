@@ -4,20 +4,20 @@ Declaration -> Declaration-initial Declaration-prime
 Declaration-initial -> Type-specifier #p_id ID
 Declaration-prime -> Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime -> ; #declare_id | [ #p_num NUM ] #declare_arr ;
-Fun-declaration-prime -> ( Params ) #add_empty_block Compound-stmt
+Fun-declaration-prime -> ( Params ) #save_params Compound-stmt #jp_func
 Type-specifier -> int | void
 Params -> int #p_id ID Param-prime Param-list | void
-Param-list -> , Param Param-list #test2 | EPSILON
+Param-list -> , Param Param-list | EPSILON
 Param -> Declaration-initial Param-prime
-Param-prime -> [ ] #test3| EPSILON
+Param-prime -> [ ] | EPSILON
 Compound-stmt -> { Declaration-list Statement-list }
 Statement-list -> Statement Statement-list | EPSILON
 Statement -> Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
 Expression-stmt -> Expression ; | break ; #break_save | ;
 Selection-stmt -> if ( Expression ) #save Statement #save_jpf else Statement #jp
 Iteration-stmt -> repeat #label Statement until ( Expression ) #until
-Return-stmt -> return Return-stmt-prime
-Return-stmt-prime -> ; | Expression ;
+Return-stmt -> return Return-stmt-prime #jp_func
+Return-stmt-prime -> ; | Expression #save_return_value ;
 Expression -> Simple-expression-zegond | #p_id ID B
 B -> = Expression #assign | [ Expression ] #test H | Simple-expression-prime
 H -> = Expression #assign | G D C
@@ -35,10 +35,10 @@ Term-prime -> Factor-prime G
 Term-zegond -> Factor-zegond G
 G -> * #mul Factor #cal G | EPSILON
 Factor -> ( Expression ) | #p_id ID Var-call-prime | #p_num NUM
-Var-call-prime -> ( #start_get_var Args ) #end_get_var | Var-prime
+Var-call-prime -> ( Args ) | Var-prime
 Var-prime -> [ Expression ] #test | EPSILON
-Factor-prime -> ( Args ) #print| EPSILON
-Factor-zegond -> ( Expression ) | #p_num NUM
+Factor-prime -> ( Args ) #call_func #print| EPSILON
+Factor-zegond -> ( Expression )  | #p_num NUM
 Args -> Arg-list | EPSILON
-Arg-list -> Expression Arg-list-prime #test5
-Arg-list-prime -> , Expression Arg-list-prime #test5 | EPSILON
+Arg-list -> Expression Arg-list-prime
+Arg-list-prime -> , Expression Arg-list-prime | EPSILON

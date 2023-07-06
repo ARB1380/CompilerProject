@@ -107,7 +107,7 @@ def get_next_token(input):
             elif is_in_special_state(3, "comment"):
                 complete_dfa.current_state -= 1
             current_index += 1
-        elif is_letter(input[current_index]):
+        elif is_letter(input[current_index]) or input[current_index] == '_':
             if is_in_initial_state():
                 start("identifier")
             elif is_in_special_state(3, "comment"):
@@ -219,7 +219,9 @@ def get_next_token(input):
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
                   '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
-                  '#break_save', '#test2', '#test3', '#test5', '#start_get_var', '#end_get_var', '#add_empty_block']
+                  '#break_save', '#jp_func','#save_return_value','#save_params', '#call_func']
+
+function_name_to_information = {}
 
 
 def is_action_symbol(action):
@@ -228,6 +230,7 @@ def is_action_symbol(action):
 
 def call_action_symbol_routine(action_symbol):
     global free_address
+    global called_function
     if action_symbol == '#p_id':
         if look_ahead.lexeme == 'main':
             code_generator.line_counter = line_counter
@@ -263,15 +266,6 @@ def call_action_symbol_routine(action_symbol):
         code_generator.variable = free_address
         code_generator.arr_access()
         free_address = code_generator.variable
-    if action_symbol == '#test2':
-        code_generator.number_of_assign_var += 1
-        # for declare a simple param
-    if action_symbol == '#test3':
-        code_generator.number_of_assign_var += 1
-        # for declare param list
-    if action_symbol == '#test5':
-        # this action for count number of var pass to func
-        code_generator.number_of_input_var += 1
     if action_symbol == '#label':
         code_generator.label()
     if action_symbol == '#until':
@@ -283,23 +277,39 @@ def call_action_symbol_routine(action_symbol):
     if action_symbol == '#jp':
         code_generator.endif()
     if action_symbol == '#print':
-        code_generator.print_out()
+        code_generator.print_out(called_function)
+        called_function = ''
     if action_symbol == '#equal':
         code_generator.equal()
     if action_symbol == '#break_save':
         code_generator.break_save()
-    if action_symbol == '#start_get_var':
-        code_generator.is_input_var = True
-    if action_symbol == '#end_get_var':
-        code_generator.is_input_var = False
-    if action_symbol == '#add_empty_block':
-        code_generator.add_empty_block()
+    if action_symbol == '#jp_func':
+        code_generator.save_return(function_name_to_information[current_function]['return_address'], current_function)
+    if action_symbol == '#save_return_value':
+        code_generator.save_return_value(address_to_return_value,function_name_to_information,current_function)
+    if action_symbol == '#save_params':
+        code_generator.save_params(function_name_to_information, current_function)
+    if action_symbol == '#call_func':
+        code_generator.call_function(function_name_to_information, called_function)
+
+
+
+previous_token = ""
+current_function = ""
+called_function = ""
+address_to_return_value = {
+
+}
 
 
 def start_parse(node):
     global look_ahead
     global has_eof_error
     global free_address
+    global current_function
+    global previous_token
+    global address_to_return_value
+    global called_function
     if node.name in terminals:
         if node.name == 'NUM' or node.name == 'ID':
             if look_ahead.type != node.name:
@@ -307,8 +317,22 @@ def start_parse(node):
                 node.parent = None
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                previous_token = look_ahead.lexeme
                 look_ahead = get_next_token(input1)
                 print(look_ahead.lexeme)
+                if look_ahead.lexeme == '(':
+                    if previous_token in function_name_to_information and previous_token != 'if':
+                        called_function = previous_token
+                        if called_function == current_function:
+                            raise Exception("recursive")
+                    elif previous_token not in function_name_to_information and previous_token != 'output' and previous_token != 'if' and previous_token != 'until' and  not is_symbol(previous_token):
+                        function_name_to_information[previous_token] = {}
+                        function_name_to_information[previous_token]['return_value_address'] = get_free_address()
+                        function_name_to_information[previous_token]['return_address'] = (get_free_address() , 2)
+                        function_name_to_information[previous_token]['params'] = []
+                        current_function = previous_token
+
+
                 if look_ahead.lexeme == '=':
                     code_generator.return_size += 1
         else:
@@ -317,8 +341,16 @@ def start_parse(node):
                 node.parent = None
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                previous_token = look_ahead.lexeme
                 look_ahead = get_next_token(input1)
                 print(look_ahead.lexeme)
+                if look_ahead.lexeme == '(':
+                    if previous_token not in function_name_to_information and previous_token != 'output' and previous_token != 'if' and previous_token != 'until' and not is_symbol(previous_token):
+                        function_name_to_information[previous_token] = {}
+                        function_name_to_information[previous_token]['return_value_address'] = get_free_address()
+                        function_name_to_information[previous_token]['return_address'] = get_free_address()
+                        current_function = previous_token
+
                 if look_ahead.lexeme == '=':
                     code_generator.return_size += 1
         return
@@ -639,6 +671,7 @@ result = result[:-1]
 file.write(result)
 file.close()
 file = open("output.txt", "w", encoding="utf-8")
+print(len(code_generator.program_block))
 for i in range(len(code_generator.program_block)):
     var0 = code_generator.program_block[i][0]
     if var0 is None:
