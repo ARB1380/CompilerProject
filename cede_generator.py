@@ -240,10 +240,8 @@ class cede_generator:
 
     def save_params(self, function_to_information, function_name):
         result = []
-        if len(self.stack) == 0:
-            return
-        while len(self.stack) != 1:
-            result.append(self.stack.pop())
+        while len(self.stack) != 0:
+            result.append(self.stack.pop(0))
 
         result.reverse()
         function_to_information[function_name]['params'] = result
@@ -267,8 +265,13 @@ class cede_generator:
         start_address = function_to_information[function_name]['start_address']
         self.program_block[self.program_counter] = ['JP', start_address, None, None]
         self.program_counter += 1
+        if 'return_value_address' in function_to_information[function_name]:
+            self.stack.append((function_to_information[function_name]['return_value_address'], 0))
+
+
+
+    def remove_function_name_from_stack(self):
         self.stack.pop()
-        self.stack.append((function_to_information[function_name]['return_value_address'], 0))
 
 
 

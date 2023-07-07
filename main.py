@@ -77,7 +77,7 @@ def get_token(type, lexeme):
         if lexeme not in sym.symbol_table:
             sym.symbol_table[lexeme] = get_free_address()
         return Token("KEYWORD", lexeme)
-    if type == "ID" and not lexeme in sym.symbol_table and not lexeme == 'main':
+    if type == "ID" and not lexeme in sym.symbol_table:
         sym.symbol_table[lexeme] = get_free_address()
     return Token(type, lexeme)
 
@@ -236,7 +236,6 @@ def call_action_symbol_routine(action_symbol):
             code_generator.line_counter = line_counter
             code_generator.line_count = line_count
             code_generator.add_call()
-            return
         code_generator.token = look_ahead.lexeme
         code_generator.push_id()
     if action_symbol == '#declare_id':
@@ -310,6 +309,8 @@ def start_parse(node):
     global previous_token
     global address_to_return_value
     global called_function
+    global code_generator
+    global previous_previous_token
     if node.name in terminals:
         if node.name == 'NUM' or node.name == 'ID':
             if look_ahead.type != node.name:
@@ -317,6 +318,7 @@ def start_parse(node):
                 node.parent = None
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+                previous_previous_token = previous_token
                 previous_token = look_ahead.lexeme
                 look_ahead = get_next_token(input1)
                 print(look_ahead.lexeme)
@@ -325,12 +327,15 @@ def start_parse(node):
                         called_function = previous_token
                         if called_function == current_function:
                             raise Exception("recursive")
+                        code_generator.remove_function_name_from_stack()
                     elif previous_token not in function_name_to_information and previous_token != 'output' and previous_token != 'if' and previous_token != 'until' and  not is_symbol(previous_token):
                         function_name_to_information[previous_token] = {}
-                        function_name_to_information[previous_token]['return_value_address'] = get_free_address()
+                        if previous_previous_token != 'void':
+                            function_name_to_information[previous_token]['return_value_address'] = get_free_address()
                         function_name_to_information[previous_token]['return_address'] = (get_free_address() , 2)
                         function_name_to_information[previous_token]['params'] = []
                         current_function = previous_token
+                        code_generator.remove_function_name_from_stack()
 
 
                 if look_ahead.lexeme == '=':
@@ -341,6 +346,7 @@ def start_parse(node):
                 node.parent = None
             else:
                 node.name = f'({look_ahead.type}, {look_ahead.lexeme})'
+
                 previous_token = look_ahead.lexeme
                 look_ahead = get_next_token(input1)
                 print(look_ahead.lexeme)
@@ -472,6 +478,7 @@ input1 = file.read()
 line_counter = 1
 line_count = 0
 next_line = 1
+previous_previous_token = ''
 # token_file = open("tokens.txt", "a")
 # symbol_file = open("symbol_table.txt", "a")
 # lexical_error_file = open("lexical_errors.txt", "a")
