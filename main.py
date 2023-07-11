@@ -5,7 +5,7 @@ import string
 from anytree import Node, RenderTree
 import json
 
-import constant
+
 from SymbolTable import SymbolTable
 from cede_generator import cede_generator
 from dfa import dfa
@@ -74,11 +74,12 @@ def start(type):
 def get_token(type, lexeme):
     reset_dfa()
     if type == "ID" and is_keyword(lexeme):
-        if lexeme not in sym.symbol_table:
-            sym.symbol_table[lexeme] = get_free_address()
+        if lexeme not in list(sym.symbol_table.values()):
+            sym.symbol_table[get_free_address()] = lexeme
         return Token("KEYWORD", lexeme)
-    if type == "ID" and not lexeme in sym.symbol_table:
-        sym.symbol_table[lexeme] = get_free_address()
+    if type == "ID" and not lexeme in list(sym.symbol_table.values()) and not lexeme in list(global_to_address.values()):
+            sym.symbol_table[get_free_address()] = lexeme
+
     return Token(type, lexeme)
 
 
@@ -90,10 +91,17 @@ def append_error(text, lexeme):
 def get_lexeme(input, start_index, end_index):
     return input[start_index: end_index]
 
+def get_token_by_address(address):
+    for key, value in sym.symbol_table.items():
+        if value == address:
+            return (key, value)
+
+
 
 def is_invalid_character(character):
     return not is_digit(character) and not is_letter(character) and not is_symbol(character) and not is_white_space(
         character)
+
 
 
 def get_next_token(input):
@@ -219,7 +227,7 @@ def get_next_token(input):
 
 action_symbols = ['#p_id', '#declare_id', '#assign', '#p_num', '#add', '#cal', '#mul', '#sub', '#less_than',
                   '#declare_arr', '#test', '#label', '#until', '#save', '#save_jpf', '#jp', '#print', '#equal',
-                  '#break_save', '#jp_func','#save_return_value','#save_params', '#call_func']
+                  '#break_save', '#jp_func','#save_return_value','#save_params', '#call_func', '#empty_symbol_table']
 
 function_name_to_information = {}
 
@@ -237,9 +245,12 @@ def call_action_symbol_routine(action_symbol):
             code_generator.line_count = line_count
             code_generator.add_call()
         code_generator.token = look_ahead.lexeme
-        code_generator.push_id()
+        code_generator.push_id(sym.symbol_table, global_to_address)
     if action_symbol == '#declare_id':
-        code_generator.declare_id()
+        code_generator.declare_id(sym.symbol_table, global_to_address, current_function, free_address)
+        free_address += code_generator.value_changed
+        code_generator.value_changed = 0
+
     if action_symbol == '#assign':
         if len(code_generator.stack) < 2:
             return
@@ -259,11 +270,11 @@ def call_action_symbol_routine(action_symbol):
         code_generator.calc(get_free_address())
     if action_symbol == '#declare_arr':
         code_generator.variable = free_address
-        code_generator.arr_declare()
+        code_generator.arr_declare(sym.symbol_table, global_to_address, current_function)
         free_address = code_generator.variable
     if action_symbol == '#test':
         code_generator.variable = free_address
-        code_generator.arr_access()
+        code_generator.arr_access(function_name_to_information, current_function)
         free_address = code_generator.variable
     if action_symbol == '#label':
         code_generator.label()
@@ -287,9 +298,14 @@ def call_action_symbol_routine(action_symbol):
     if action_symbol == '#save_return_value':
         code_generator.save_return_value(address_to_return_value,function_name_to_information,current_function)
     if action_symbol == '#save_params':
-        code_generator.save_params(function_name_to_information, current_function)
+        code_generator.save_params(function_name_to_information, current_function, free_address, sym.symbol_table, global_to_address)
+        free_address += code_generator.value_changed
+        code_generator.value_changed = 0
     if action_symbol == '#call_func':
-        code_generator.call_function(function_name_to_information, called_function)
+        code_generator.variable = free_address
+        code_generator.call_function(function_name_to_information, called_function, sym.symbol_table)
+    if action_symbol == '#empty_symbol_table':
+        sym.symbol_table = {}
 
 
 
@@ -297,6 +313,10 @@ previous_token = ""
 current_function = ""
 called_function = ""
 address_to_return_value = {
+
+}
+
+global_to_address = {
 
 }
 
@@ -555,7 +575,7 @@ look_ahead = ""
 look_ahead = get_next_token(input1)
 errors = []
 has_eof_error = False
-code_generator = cede_generator(sym.symbol_table)  # todo : fix
+code_generator = cede_generator()  # todo : fix
 start_parse(start_node)
 if not has_eof_error:
     end_node = Node("$", parent=start_node)

@@ -3,8 +3,7 @@ def get_str_val(item: list) -> str:
 
 
 class cede_generator:
-    def __init__(self, symbol_table) -> None:
-        self.symbol_table = symbol_table
+    def __init__(self) -> None:
         self.program_block = [[None, None, None, None] for _ in range(100)]  # program block
         self.stack = []  # semantic stack
         self.breaks_link = []  # linked list used for implementation of breaks
@@ -18,6 +17,7 @@ class cede_generator:
         self.variable = 500
         self.has_break = False
         self.return_size = 0
+        self.value_changed = 0
 
     # pops an element from stack (used for balancing the statements)
     # returns a temp register
@@ -110,12 +110,17 @@ class cede_generator:
     def div(self):
         self.stack.append(('DIV', 0))
 
-    def get_index(self):
-        return self.symbol_table[self.token]
+    def get_index(self, symbol_table, global_to_address):
+        for key, value in symbol_table.items():
+            if symbol_table[key] == self.token:
+                return key
+        for key, value in global_to_address.items():
+            if global_to_address[key] == self.token:
+                return key
 
     # pushes the ID of the next input (token) to the stack
-    def push_id(self):
-        self.stack.append((self.get_index(), 0))
+    def push_id(self, symbol_table, global_to_address):
+        self.stack.append((self.get_index(symbol_table, global_to_address), 0))
 
     # push a number to the stack
     def push_num(self):
@@ -161,17 +166,26 @@ class cede_generator:
         self.save()
 
     # set size of the array
-    def arr_declare(self):
+    def arr_declare(self, symbol_table, global_to_address, current_function):
         size = self.stack[-1][0]
+        if self.stack[-2][0] not in symbol_table:
+            lexeme = global_to_address[self.stack[-2][0]]
+            symbol_table[self.variable] = lexeme
+            self.stack[-2] = (self.variable, 0)
         # self.symbol_table[self.token] = ((self.stack[-2]), size)
         self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(self.stack[-2]), None]
+        if current_function == '':
+            lexeme = symbol_table[self.stack[-2][0]]
+            global_to_address[self.stack[-2][0]] = lexeme
+            del symbol_table[self.stack[-2][0]]
+
         self.variable += (size - 1) * 4
         self.program_counter += 1
         self.stack.pop()
         self.stack.pop()
 
     # we should play with addresses, and we did that in this function
-    def arr_access(self):
+    def arr_access(self, function_to_information, function_name):
         t = self.variable
         address = self.stack[-2][0]
         num = self.stack[-1]
@@ -179,7 +193,18 @@ class cede_generator:
         self.program_block[self.program_counter] = ['MULT', x, '#4', t]
         x = self.stack.pop()
         x = ('' if not x[1] else '#' if x[1] == 1 else '@') + str(x[0])
-        self.program_block[self.program_counter + 1] = ['ADD', f'#{address}', t, t]
+        if function_name != 'main':
+            parameters = function_to_information[function_name]['params']
+            to_do = False
+            for parameter in parameters:
+                if address == parameter[0]:
+                    to_do = True
+                    self.program_block[self.program_counter + 1] = ['ADD', address, t, t]
+                    break
+            if not to_do:
+                self.program_block[self.program_counter + 1] = ['ADD', f'#{address}', t, t]
+        else:
+            self.program_block[self.program_counter + 1] = ['ADD', f'#{address}', t, t]
         self.stack.pop()
         self.variable += 4
         self.stack.append((t, 2))
@@ -190,9 +215,22 @@ class cede_generator:
         while self.breaks_link and self.breaks_link[-1][1] == self.current_scope:
             self.program_block[self.breaks_link.pop()[0]] = ['JP', self.program_counter, None, None]
 
-    def declare_id(self):
+    def declare_id(self, symbol_table, globals_to_address, current_function, free_address):
         id = self.stack[-1]
+        if id[0] not in symbol_table:
+            lexeme = globals_to_address[id[0]]
+            id = (free_address, 0)
+            free_address += 4
+            self.value_changed += 4
+            symbol_table[id[0]] = lexeme
+
         self.program_block[self.program_counter] = ['ASSIGN', '#0', get_str_val(id), None]
+        if current_function == '':
+            lexeme = symbol_table[id[0]]
+            globals_to_address[id[0]] = lexeme
+            del symbol_table[id[0]]
+
+
         # self.symbol_table[self.token] = ((self.stack[-1]), 1)
         self.stack.pop()
         self.program_counter += 1
@@ -238,25 +276,34 @@ class cede_generator:
         self.program_block[self.program_counter] = ['ASSIGN', get_str_val(self.stack.pop()), function_to_information[function_name]['return_value_address'], None]
         self.program_counter += 1
 
-    def save_params(self, function_to_information, function_name):
+    def save_params(self, function_to_information, function_name, free_address, symbol_table, global_to_address):
         result = []
         while len(self.stack) != 0:
-            result.append(self.stack.pop(0))
+            x = self.stack.pop()
+            if x[0] not in symbol_table:
+                lexeme = global_to_address[x[0]]
+                x = (free_address, 0)
+                free_address += 4
+                self.value_changed += 4
+                symbol_table[x[0]] = lexeme
 
-        result.reverse()
+            result.append(x)
+
         function_to_information[function_name]['params'] = result
         self.stack = []
         function_to_information[function_name]['start_address'] = self.program_counter
 
         print(function_to_information[function_name]['params'])
 
-    def call_function(self, function_to_information, function_name):
+    def call_function(self, function_to_information, function_name, symbol_table):
         if function_name == '':
             return
         parameters = function_to_information[function_name]['params']
         for i in range(len(parameters)):
             x = self.stack.pop()
-            self.program_block[self.program_counter] = ['ASSIGN', get_str_val(x), get_str_val(parameters[len(parameters) - 1 - i]), None]
+            if self.is_array(x[0], symbol_table):
+                x = (x[0], 1)
+            self.program_block[self.program_counter] = ['ASSIGN', get_str_val(x), get_str_val(parameters[i]), None]
             self.program_counter += 1
         return_address = function_to_information[function_name]['return_address']
         y = (self.program_counter + 2, 1)
@@ -272,6 +319,14 @@ class cede_generator:
 
     def remove_function_name_from_stack(self):
         self.stack.pop()
+
+    def is_array(self, address, symbol_table):
+        if address + 4 in symbol_table:
+            return False
+        if self.variable == address + 4:
+            return False
+        return True
+
 
 
 
